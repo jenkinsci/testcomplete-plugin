@@ -1,0 +1,77 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <l:layout title="${%PageTitle}">
+
+        <st:include it="${it.build}" page="sidepanel.jelly"/>
+
+        <l:main-panel>
+            <h2>${%PageTitle}</h2><br/>
+
+            <table style="width:95%;" class="sortable pane bigtable">
+                <thead>
+                    <tr>
+                        <th style="text-align: left;" class="pane-header">${%Status}</th>
+                        <th style="text-align: left;" class="pane-header">${%Test}</th>
+                        <th style="text-align: left;" class="pane-header">${%Agent}</th>
+                        <th style="text-align: left;" class="pane-header">${%StartTime}</th>
+                        <th style="text-align: left;" class="pane-header">${%RunTime}</th>
+
+                        <th style="text-align: left;" class="pane-header">${%Warnings}</th>
+                        <th style="text-align: left;" class="pane-header">${%Errors}</th>
+                        <th style="text-align: left;" class="pane-header">${%DownloadLog}</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <j:forEach items="${it.reports.values()}" var="r">
+                        <tr>
+
+                            <td style="text-align:left;">
+                                <j:if test="${r.exitCode == 0}">
+                                    <img src="${rootURL}/plugin/${it.getPluginName()}/images/ok.png"/>
+                                </j:if>
+                                <j:if test="${r.exitCode == 1}">
+                                    <img src="${rootURL}/plugin/${it.getPluginName()}/images/warn.png"/>
+                                </j:if>
+                                <j:if test="${r.exitCode != 0 &amp;&amp; r.exitCode != 1}">
+                                    <img src="${rootURL}/plugin/${it.getPluginName()}/images/error.png"/>
+                                </j:if>
+
+                                <span style="padding-left:15px;">
+                                    <j:if test="${r.result}">
+                                        ${%Passed}
+                                    </j:if>
+
+                                    <j:if test="${!r.result}">
+                                        ${%Failed}
+                                    </j:if>
+                                </span>
+                            </td>
+
+                            <td>
+                                <a class="inside" href="reports/${r.id}">${r.testName}</a>
+
+
+                            </td>
+
+                            <td>${r.agent}</td>
+
+                            <td>${r.logInfo.formatStartTime()}</td>
+
+                            <td>${r.logInfo.formatTestDuration()}</td>
+
+                            <td>${r.logInfo.warningCount}</td>
+                            <td>${r.logInfo.errorCount}</td>
+                            <td>
+                                <j:if test="${r.tcLogXFileName != ''}">
+                                    <a href="dynamic/${r.tcLogXFileName}" title="Download Log File"><img border="0" alt="Download the log file" src="${rootURL}/plugin/${it.getPluginName()}/images/download.png"/></a>
+                                </j:if>
+                            </td>
+
+                        </tr>
+                    </j:forEach>
+                </tbody>
+            </table>
+        </l:main-panel>
+    </l:layout>
+</j:jelly>
+

@@ -1,0 +1,42 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <l:layout title="${%PageTitle}">
+
+        <l:side-panel>
+            <l:tasks>
+                <l:task icon="images/24x24/up.png" href="../.." title="${%BackToSummary}" />
+
+                <j:set var="nextReport" value="${it.parent.getNextReport(it)}"/>
+                <j:if test="${nextReport != null}">
+                    <l:task icon="images/24x24/next.png" href="../${nextReport.id}" title="${%NextReport}" />
+                </j:if>
+
+                <j:set var="previousReport" value="${it.parent.getPreviousReport(it)}"/>
+                <j:if test="${previousReport != null}">
+                    <l:task icon="images/24x24/previous.png" href="../${previousReport.id}" title="${%PreviousReport}" />
+                </j:if>
+            </l:tasks>
+        </l:side-panel>
+
+        <l:main-panel>
+            <h2>${%PageTitle}</h2>
+
+            <j:if test="${it.error != ''}">
+                <j:set var="errorMessage" escapeText="true" value="${it.error}" />
+                <span style="color:red;">${errorMessage}</span>
+                <br/><br/>
+            </j:if>
+
+            <j:if test="${!it.hasInfo()}">
+                <span style="color:red;">${it.getNoInfoMessage("../../../console")}</span>
+                <br/><br/>
+            </j:if>
+
+            <j:if test="${it.htmlXFileName != ''}">
+                <iframe width="95%" height="800px" frameBorder="0" src="../../dynamic/${it.id}/" />
+            </j:if>
+        </l:main-panel>
+    </l:layout>
+
+</j:jelly>
+

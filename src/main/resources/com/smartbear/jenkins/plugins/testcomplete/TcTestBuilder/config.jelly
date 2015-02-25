@@ -1,0 +1,90 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+  <f:block>
+
+    <f:block>
+     ${%LinkToHelp}
+    </f:block>
+
+    <f:entry title="${%Suite}" field="suite" description="${%SuiteDescription}">
+      <f:textbox />
+    </f:entry>
+
+    <f:radioBlock name="launchConfig" title="${%TypeWholeSuite}" value="lcSuite" checked="${instance.launchType == 'lcSuite' || instance.launchType == null}" >
+    </f:radioBlock>
+
+    <f:radioBlock title="${%TypeSpecificProject}" name="launchConfig" value="lcProject" checked="${instance.launchType == 'lcProject'}" >
+      <f:entry title="${%Project}" field="project" description="${%ProjectDescription}">
+        <f:textbox  value="${instance.launchType == 'lcProject' &amp;&amp; instance.project != null ? instance.project : ''}" />
+      </f:entry>
+    </f:radioBlock>
+
+    <f:radioBlock title="${%TypeRoutine}" name="launchConfig" value="lcRoutine" checked="${instance.launchType == 'lcRoutine'}" >
+      <f:entry title="${%Project}" field="project" description="${%ProjectDescription}">
+        <f:textbox value="${instance.launchType == 'lcRoutine' &amp;&amp; instance.project != null ? instance.project : ''}" />
+      </f:entry>
+      <f:entry title="${%Unit}" field="unit" description="${%UnitDescription}">
+        <f:textbox value="${instance.launchType == 'lcRoutine' &amp;&amp; instance.unit != null ? instance.unit : ''}" />
+      </f:entry>
+      <f:entry title="${%Routine}" field="routine" description="${%RoutineDescription}">
+        <f:textbox value="${instance.launchType == 'lcRoutine' &amp;&amp; instance.routine != null ? instance.routine : ''}" />
+      </f:entry>
+    </f:radioBlock>
+
+    <f:radioBlock title="${%TypeKDT}" name="launchConfig" value="lcKdt" checked="${instance.launchType == 'lcKdt'}" >
+      <f:entry title="${%Project}" field="project" description="${%ProjectDescription}">
+        <f:textbox value="${instance.launchType == 'lcKdt' &amp;&amp; instance.project != null ? instance.project : ''}" />
+      </f:entry>
+      <f:entry title="${%Test}" field="test" description="${%TestKdtDescription}">
+        <f:textbox value="${instance.launchType == 'lcKdt' &amp;&amp; instance.test != null ? instance.test : ''}" />
+      </f:entry>
+    </f:radioBlock>
+
+    <f:radioBlock title="${%TypeTestItem}" name="launchConfig" value="lcItem" checked="${instance.launchType == 'lcItem'}" >
+      <f:entry title="${%Project}" field="project" description="${%ProjectDescription}">
+        <f:textbox value="${instance.launchType == 'lcItem' &amp;&amp; instance.project != null ? instance.project : ''}" />
+      </f:entry>
+      <f:entry title="${%TestItemName}" field="test" description="${%TestItemDescription}">
+        <f:textbox value="${instance.launchType == 'lcItem' &amp;&amp; instance.test != null ? instance.test : ''}" />
+      </f:entry>
+    </f:radioBlock>
+
+    <f:section title="${%ExecutorSettings}">
+      <f:advanced>
+        <f:entry title="${%Executor}" field="executorType">
+          <f:select />
+        </f:entry>
+        <f:entry title="${%Version}" field="executorVersion">
+          <f:select />
+        </f:entry>
+        <f:entry title="${%ActionOnWarningsTitle}" field="actionOnWarnings">
+          <f:select default="NONE"/>
+        </f:entry>
+        <f:entry title="${%ActionOnErrorsTitle}" field="actionOnErrors">
+          <f:select default="MAKE_UNSTABLE"/>
+        </f:entry>
+        <f:optionalBlock title="${%UseTestTimeout}" inline="true" field="useTimeout">
+          <f:entry title="${%TimeoutInSeconds}" field="timeout">
+            <f:textbox value="${instance.useTimeout ? instance.timeout : ''}" />
+          </f:entry>
+        </f:optionalBlock>
+
+        <f:optionalBlock title="${%UseTCServiceForProcessLaunching}" inline="true" field="useTCService">
+          <f:entry title="${%UserName}" field="userName">
+            <f:textbox />
+          </f:entry>
+
+          <f:entry title="${%UserPassword}" field="userPassword">
+            <f:password/>
+          </f:entry>
+
+          <f:entry title="${%UseActiveSession}" field="useActiveSession">
+            <f:checkbox default="true"/>
+          </f:entry>
+        </f:optionalBlock>
+
+      </f:advanced>
+    </f:section>
+  </f:block>
+
+</j:jelly>
