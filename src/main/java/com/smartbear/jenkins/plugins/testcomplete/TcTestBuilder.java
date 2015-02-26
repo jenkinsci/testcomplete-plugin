@@ -216,7 +216,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         try {
             workspace = new Workspace(build, launcher, listener);
         } catch (IOException e) {
-            TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.getCause().getMessage());
+            TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
             TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
             build.setResult(Result.FAILURE);
             return false;
@@ -247,7 +247,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                     args = prepareServiceCommandLine(chosenInstallation, args);
                 }
                 catch (Exception e) {
-                    TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.getMessage());
+                    TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
                     build.setResult(Result.FAILURE);
                     return false;
@@ -317,7 +317,7 @@ public class TcTestBuilder extends Builder implements Serializable {
             }
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(),
-                    e.getCause() == null ? e.getMessage() : e.getCause().getMessage());
+                    e.getCause() == null ? e.toString() : e.getCause().toString());
         } finally {
             tcReportAction.setExitCode(exitCode);
             tcReportAction.setResult(result);

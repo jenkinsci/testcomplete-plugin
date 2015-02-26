@@ -38,8 +38,8 @@ public class TcInstallation implements Serializable{
     }
 
     public String getServicePath() {
-        return new File(new File(path).getParentFile().getAbsolutePath(),
-                String.format(Constants.TC_SERVICE_EXEC_NAME, getMajorVersion())).getAbsolutePath();
+        String tcBinDirPath = path.substring(0, path.lastIndexOf("\\"));
+        return tcBinDirPath + "\\" + String.format(Constants.TC_SERVICE_EXEC_NAME, getMajorVersion());
     }
 
     public ExecutorType getType() {
