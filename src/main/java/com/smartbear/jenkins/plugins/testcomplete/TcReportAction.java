@@ -75,7 +75,7 @@ public class TcReportAction implements Action, Serializable {
 
     @Exported(name="url")
     public String getUrl() {
-        return Jenkins.getInstance().getRootUrl() + build.getUrl() + "tc/reports/" + id;
+        return Jenkins.getInstance().getRootUrl() + build.getUrl() + Constants.PLUGIN_NAME + "/reports/" + id;
     }
 
     public String getTcLogXFileName() {
