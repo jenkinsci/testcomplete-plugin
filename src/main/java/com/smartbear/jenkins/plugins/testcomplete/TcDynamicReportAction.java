@@ -10,8 +10,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -75,10 +73,9 @@ public class TcDynamicReportAction implements Action{
             FileInputStream fis = null;
 
             try {
-                BasicFileAttributes readAttributes = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
                 fis = new FileInputStream(file);
                 rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + "\"");
-                rsp.serveFile(req, fis, readAttributes.lastModifiedTime().toMillis(), 0, readAttributes.size(), "mime-type:application/force-download");
+                rsp.serveFile(req, fis, file.lastModified(), 0, file.length(), "mime-type:application/force-download");
             } catch (IOException e) {
                 rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             } finally {

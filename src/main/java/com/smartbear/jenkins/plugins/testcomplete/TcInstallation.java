@@ -1,6 +1,5 @@
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import java.io.File;
 import java.io.Serializable;
 
 /**
