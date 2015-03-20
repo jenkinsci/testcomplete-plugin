@@ -89,34 +89,42 @@ public class TcTestBuilder extends Builder implements Serializable {
     }
 
     @DataBoundConstructor
-    public TcTestBuilder(JSONObject formData) {
-        this.suite = formData.getString("suite");
+    public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
+                         String actionOnWarnings, String actionOnErrors, boolean useTimeout, String timeout,
+                         boolean useTCService, String userName, String userPassword, boolean useActiveSession) {
+        this.suite = suite != null ? suite : "";
 
-        JSONObject launchConfig = formData.getJSONObject("launchConfig");
-
-        this.launchType = launchConfig.getString("value");
-        this.project = launchConfig.optString("project", "");
-        this.unit = launchConfig.optString("unit", "");
-        this.routine = launchConfig.optString("routine", "");
-        this.test = launchConfig.optString("test", "");
-
-        this.executorType = formData.getString("executorType");
-        this.executorVersion = formData.getString("executorVersion");
-        this.actionOnWarnings = formData.getString("actionOnWarnings");
-        this.actionOnErrors = formData.getString("actionOnErrors");
-
-        this.useTimeout = formData.getBoolean("useTimeout");
-        this.timeout = formData.getString("timeout");
-
-        if (this.useTimeout && this.timeout.isEmpty()) {
-            this.useTimeout = false;
+        if (launchConfig != null) {
+            this.launchType = launchConfig.optString("value", TcInstallation.LaunchType.lcSuite.toString());
+            this.project = launchConfig.optString("project", "");
+            this.unit = launchConfig.optString("unit", "");
+            this.routine = launchConfig.optString("routine", "");
+            this.test = launchConfig.optString("test", "");
+        } else {
+            this.launchType = TcInstallation.LaunchType.lcSuite.toString();
+            this.project = "";
+            this.unit = "";
+            this.routine = "";
+            this.test = "";
         }
 
-        this.useTCService = formData.getBoolean("useTCService");
+        this.executorType = executorType != null ? executorType : Constants.ANY_CONSTANT;
+        this.executorVersion = executorVersion != null ? executorVersion : Constants.ANY_CONSTANT;
+        this.actionOnWarnings = actionOnWarnings != null ? actionOnWarnings : BuildStepAction.NONE.toString();
+        this.actionOnErrors = actionOnErrors != null ? actionOnErrors : BuildStepAction.MAKE_UNSTABLE.toString();
+
+        this.useTimeout = useTimeout;
+        if (this.useTimeout) {
+            this.timeout = timeout != null ? timeout : "";
+        } else {
+            this.timeout = "";
+        }
+
+        this.useTCService = useTCService;
         if (this.useTCService) {
-            this.userName = formData.getString("userName");
-            this.userPassword = formData.getString("userPassword");
-            this.useActiveSession = formData.getBoolean("useActiveSession");
+            this.userName = userName != null ? userName : "";
+            this.userPassword = userPassword != null ? userPassword : "";
+            this.useActiveSession = useActiveSession;
         } else {
             this.userName = "";
             this.userPassword = "";
@@ -597,7 +605,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         @Override
         public Builder newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-            return new TcTestBuilder(formData);
+            return super.newInstance(req, formData);
         }
 
         public FormValidation doCheckSuite(@QueryParameter String value)
