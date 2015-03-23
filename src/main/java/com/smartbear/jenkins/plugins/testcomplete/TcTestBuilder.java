@@ -207,9 +207,19 @@ public class TcTestBuilder extends Builder implements Serializable {
             throws IOException, InterruptedException {
 
         final PrintStream logger = listener.getLogger();
+        EnvVars env = build.getEnvironment(listener);
         logger.println();
 
-        String testDisplayName = makeDisplayName();
+        String testDisplayName;
+        try {
+            testDisplayName = makeDisplayName(build, listener);
+        } catch (Exception e) {
+            TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
+            TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
+            build.setResult(Result.FAILURE);
+            return false;
+        }
+
         TcLog.info(listener, Messages.TcTestBuilder_TestStartedMessage(), testDisplayName);
 
         if (!Utils.isWindows(launcher.getChannel(), listener)) {
@@ -276,7 +286,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                 return false;
             } else {
                 try {
-                    args = prepareServiceCommandLine(chosenInstallation, args);
+                    args = prepareServiceCommandLine(chosenInstallation, args, env);
                 }
                 catch (Exception e) {
                     TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
@@ -290,7 +300,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         // TC/TE launching and data processing
         final TcReportAction tcReportAction = new TcReportAction(build,
                 workspace.getLogId(),
-                makeDisplayName(),
+                testDisplayName,
                 build.getBuiltOn().getDisplayName());
 
         int exitCode = -2;
@@ -299,7 +309,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         try {
             TcLog.info(listener, Messages.TcTestBuilder_LaunchingTestRunner());
 
-            long realTimeout = getTimeoutValue(null);
+
+            long realTimeout = getTimeoutValue(null, env);
             if (realTimeout != -1) {
                 realTimeout += Constants.WAITING_AFTER_TIMEOUT_INTERVAL;
                 if (useTCService) {
@@ -361,12 +372,12 @@ public class TcTestBuilder extends Builder implements Serializable {
         return true;
     }
 
-    private ArgumentListBuilder prepareServiceCommandLine(TcInstallation chosenInstallation, ArgumentListBuilder baseArgs) throws Exception{
+    private ArgumentListBuilder prepareServiceCommandLine(TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
         ArgumentListBuilder resultArgs = new ArgumentListBuilder();
 
         resultArgs.addQuoted(chosenInstallation.getServicePath());
 
-        String userName = getUserName();
+        String userName = env.expand(getUserName());
         String domain = "";
         if (userName.contains("\\")) {
             int pos = userName.lastIndexOf("\\");
@@ -379,10 +390,10 @@ public class TcTestBuilder extends Builder implements Serializable {
         resultArgs.add(Constants.SERVICE_ARG_DOMAIN).addQuoted(domain);
         resultArgs.add(Constants.SERVICE_ARG_NAME).addQuoted(userName);
 
-        String encryptedPassword = Utils.encryptPassword(getUserPassword());
+        String encryptedPassword = Utils.encryptPassword(env.expand(getUserPassword()));
         resultArgs.add(Constants.SERVICE_ARG_PASSWORD).addQuoted(encryptedPassword, true);
 
-        long timeout = getTimeoutValue(null);
+        long timeout = getTimeoutValue(null, env);
 
         if (timeout != -1) {
             timeout += Constants.SERVICE_INTERVAL_DELAY;
@@ -453,35 +464,36 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
     }
 
-    private String makeDisplayName() {
+    private String makeDisplayName(AbstractBuild build, BuildListener listener) throws IOException, InterruptedException {
         StringBuilder builder = new StringBuilder();
+        EnvVars env = build.getEnvironment(listener);
 
         String launchType = getLaunchType();
 
         // always add suite name to test display name
-        String suiteFileName = new FilePath(new File(getSuite())).getBaseName();
+        String suiteFileName = new FilePath(new File(env.expand(getSuite()))).getBaseName();
         builder.append(suiteFileName);
 
         if (TcInstallation.LaunchType.lcProject.name().equals(launchType)) {
             builder.append("/");
-            builder.append(getProject());
+            builder.append(env.expand(getProject()));
         } else if (TcInstallation.LaunchType.lcRoutine.name().equals(launchType)) {
             builder.append("/");
-            builder.append(getProject());
+            builder.append(env.expand(getProject()));
             builder.append("/");
-            builder.append(getUnit());
+            builder.append(env.expand(getUnit()));
             builder.append("/");
-            builder.append(getRoutine());
+            builder.append(env.expand(getRoutine()));
         } else if (TcInstallation.LaunchType.lcKdt.name().equals(launchType)) {
             builder.append("/");
-            builder.append(getProject());
+            builder.append(env.expand(getProject()));
             builder.append("/KeyWordTests|");
-            builder.append(getTest());
+            builder.append(env.expand(getTest()));
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
             builder.append("/");
-            builder.append(getProject());
+            builder.append(env.expand(getProject()));
             builder.append("/");
-            builder.append(getTest());
+            builder.append(env.expand(getTest()));
         }
 
         return builder.toString();
@@ -512,10 +524,10 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
     }
 
-    private long getTimeoutValue(BuildListener listener) {
+    private long getTimeoutValue(BuildListener listener, EnvVars env) {
         if (getUseTimeout()) {
             try {
-                long timeout = Long.parseLong(getTimeout());
+                long timeout = Long.parseLong(env.expand(getTimeout()));
                 if (timeout > 0) {
                     return timeout;
                 }
@@ -523,7 +535,8 @@ public class TcTestBuilder extends Builder implements Serializable {
                 // Do nothing
             }
             if (listener != null) {
-                TcLog.warning(listener, Messages.TcTestBuilder_InvalidTimeoutValue(), getTimeout());
+                TcLog.warning(listener, Messages.TcTestBuilder_InvalidTimeoutValue(),
+                        env.expand(getTimeout()));
             }
         }
         return -1; // infinite
@@ -542,7 +555,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         EnvVars env = build.getEnvironment(listener);
 
-        args.add(new FilePath(workspace.getSlaveWorkspacePath(), Util.replaceMacro(getSuite(), env)));
+        args.add(new FilePath(workspace.getSlaveWorkspacePath(), env.expand(getSuite())));
 
         args.add(RUN_ARG);
         args.add(SILENT_MODE_ARG);
@@ -554,24 +567,24 @@ public class TcTestBuilder extends Builder implements Serializable {
         args.add(ERROR_LOG_ARG + workspace.getSlaveErrorFilePath().getRemote());
 
         if (getUseTimeout()) {
-            long timeout = getTimeoutValue(listener);
+            long timeout = getTimeoutValue(listener, env);
             if (timeout != -1) {
                 args.add(TIMEOUT_ARG + timeout);
             }
         }
 
         if (TcInstallation.LaunchType.lcProject.name().equals(launchType)) {
-            args.add(PROJECT_ARG + getProject());
+            args.add(PROJECT_ARG + env.expand(getProject()));
         } else if (TcInstallation.LaunchType.lcRoutine.name().equals(launchType)) {
-            args.add(PROJECT_ARG + getProject());
-            args.add(UNIT_ARG + getUnit());
-            args.add(ROUTINE_ARG + getRoutine());
+            args.add(PROJECT_ARG + env.expand(getProject()));
+            args.add(UNIT_ARG + env.expand(getUnit()));
+            args.add(ROUTINE_ARG + env.expand(getRoutine()));
         } else if (TcInstallation.LaunchType.lcKdt.name().equals(launchType)) {
-            args.add(PROJECT_ARG + getProject());
-            args.add(TEST_ARG + "KeyWordTests|" + getTest());
+            args.add(PROJECT_ARG + env.expand(getProject()));
+            args.add(TEST_ARG + "KeyWordTests|" + env.expand(getTest()));
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
-            args.add(PROJECT_ARG + getProject());
-            args.add(TEST_ARG + getTest());
+            args.add(PROJECT_ARG + env.expand(getProject()));
+            args.add(TEST_ARG + env.expand(getTest()));
         }
 
         if (installation.getType() == TcInstallation.ExecutorType.TE) {
