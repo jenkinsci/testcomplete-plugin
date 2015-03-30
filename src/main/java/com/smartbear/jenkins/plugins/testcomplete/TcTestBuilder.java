@@ -26,6 +26,8 @@ package com.smartbear.jenkins.plugins.testcomplete;
 import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.junit.TestResult;
+import hudson.tasks.junit.TestResultAction;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.tasks.Builder;
@@ -81,6 +83,8 @@ public class TcTestBuilder extends Builder implements Serializable {
     private String userName;
     private String userPassword;
     private boolean useActiveSession;
+    private boolean generateMHT;
+    private final boolean publishJUnitReports;
 
     public static enum BuildStepAction {
         NONE,
@@ -91,7 +95,8 @@ public class TcTestBuilder extends Builder implements Serializable {
     @DataBoundConstructor
     public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
                          String actionOnWarnings, String actionOnErrors, boolean useTimeout, String timeout,
-                         boolean useTCService, String userName, String userPassword, boolean useActiveSession) {
+                         boolean useTCService, String userName, String userPassword, boolean useActiveSession,
+                         boolean generateMHT, boolean publishJUnitReports) {
         this.suite = suite != null ? suite : "";
 
         if (launchConfig != null) {
@@ -130,6 +135,9 @@ public class TcTestBuilder extends Builder implements Serializable {
             this.userPassword = "";
             this.useActiveSession = false;
         }
+
+        this.generateMHT = generateMHT;
+        this.publishJUnitReports = publishJUnitReports;
     }
 
     // Do not launch more than one build (TC can not be launched more than once)
@@ -200,6 +208,14 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     public boolean getUseActiveSession() {
         return useActiveSession;
+    }
+
+    public boolean getGenerateMHT() {
+        return generateMHT;
+    }
+
+    public boolean getPublishJUnitReports() {
+        return publishJUnitReports;
     }
 
     @Override
@@ -332,7 +348,7 @@ public class TcTestBuilder extends Builder implements Serializable {
             TcLog.info(listener, Messages.TcTestBuilder_ExitCodeMessage(),
                     exitCodeDescription == null ? exitCode : exitCode + " (" + exitCodeDescription + ")");
 
-            processFiles(workspace, tcReportAction, listener, startTime);
+            processFiles(build, listener, workspace, tcReportAction, startTime);
 
             if (exitCode == 0) {
                 result = true;
@@ -366,10 +382,79 @@ public class TcTestBuilder extends Builder implements Serializable {
             tcReportAction.setResult(result);
             TcSummaryAction currentAction = getOrCreateAction(build);
             currentAction.addReport(tcReportAction);
+            if (getPublishJUnitReports()) {
+                publishResult(build, listener, workspace, tcReportAction);
+            }
         }
 
         TcLog.info(listener, Messages.TcTestBuilder_TestExecutionFinishedMessage(), testDisplayName);
         return true;
+    }
+
+    private TestResultAction getTestResultAction(AbstractBuild<?, ?> build) {
+        return build.getAction(TestResultAction.class);
+    }
+
+    private void publishResult(AbstractBuild build, BuildListener listener,
+                               Workspace workspace, TcReportAction tcReportAction) {
+
+        if (tcReportAction.getLogInfo().getXML() == null) {
+            TcLog.warning(listener, Messages.TcTestBuilder_UnableToPublishTestData());
+            return;
+        }
+
+        FileOutputStream fos = null;
+        PrintWriter pw = null;
+
+        File reportFile = new File(workspace.getMasterLogDirectory().getRemote(), tcReportAction.getId() + ".xml");
+        try {
+            fos = new FileOutputStream(reportFile);
+            pw = new PrintWriter(fos);
+            pw.append(tcReportAction.getLogInfo().getXML());
+            pw.flush();
+            pw.close();
+            pw = null;
+            fos.close();
+            fos = null;
+
+            TestResultAction testResultAction = getTestResultAction(build);
+
+            boolean testResultActionExists = true;
+            if (testResultAction == null) {
+                testResultActionExists = false;
+                TestResult testResult = new hudson.tasks.junit.TestResult(true);
+                testResult.parse(reportFile);
+                testResultAction = new TestResultAction(build, testResult, listener);
+            } else {
+                TestResult testResult = testResultAction.getResult();
+                testResult.parse(reportFile);
+                testResult.tally();
+                testResultAction.setResult(testResult, listener);
+            }
+
+            if (!testResultActionExists) {
+                build.getActions().add(testResultAction);
+            }
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (pw != null) {
+                pw.close();
+            }
+
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    // Do nothing
+                }
+            }
+            if (reportFile.exists()) {
+                reportFile.delete();
+            }
+        }
     }
 
     private ArgumentListBuilder prepareServiceCommandLine(TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
@@ -408,7 +493,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         return resultArgs;
     }
 
-    private void processFiles(Workspace workspace, TcReportAction testResult, BuildListener listener, long startTime)
+    private void processFiles(AbstractBuild build, BuildListener listener, Workspace workspace, TcReportAction testResult, long startTime)
             throws IOException, InterruptedException {
 
         // reading error file
@@ -435,8 +520,11 @@ public class TcTestBuilder extends Builder implements Serializable {
                 workspace.getSlaveLogXFilePath().copyTo(workspace.getMasterLogXFilePath());
                 String logFileName = workspace.getMasterLogXFilePath().getName();
                 testResult.setTcLogXFileName(logFileName);
-                TcLogParser tcLogParser = new TcLogParser(new File(workspace.getMasterLogXFilePath().getRemote()));
-                testResult.setLogInfo(tcLogParser.parse());
+                EnvVars env = build.getEnvironment(listener);
+                String suiteFileName = new FilePath(new File(env.expand(getSuite()))).getBaseName();
+                TcLogParser tcLogParser = new TcLogParser(new File(workspace.getMasterLogXFilePath().getRemote()),
+                        suiteFileName, env.expand(getProject()), getPublishJUnitReports());
+                testResult.setLogInfo(tcLogParser.parse(listener));
             } finally {
                 workspace.getSlaveLogXFilePath().delete();
             }
@@ -461,6 +549,21 @@ public class TcTestBuilder extends Builder implements Serializable {
         } else {
             TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
                     workspace.getSlaveHtmlXFilePath().getName());
+        }
+
+        //copying mht file
+
+        if (getGenerateMHT() && workspace.getSlaveMHTFilePath().exists()) {
+            try {
+                workspace.getSlaveMHTFilePath().copyTo(workspace.getMasterMHTFilePath());
+                String logFileName = workspace.getMasterMHTFilePath().getName();
+                testResult.setMhtFileName(logFileName);
+            } finally {
+                workspace.getSlaveMHTFilePath().delete();
+            }
+        } else {
+            TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
+                    workspace.getSlaveMHTFilePath().getName());
         }
     }
 
@@ -565,6 +668,10 @@ public class TcTestBuilder extends Builder implements Serializable {
         args.add(EXPORT_LOG_ARG + workspace.getSlaveLogXFilePath().getRemote());
         args.add(EXPORT_LOG_ARG + workspace.getSlaveHtmlXFilePath().getRemote());
         args.add(ERROR_LOG_ARG + workspace.getSlaveErrorFilePath().getRemote());
+
+        if (getGenerateMHT()) {
+            args.add(EXPORT_LOG_ARG + workspace.getSlaveMHTFilePath().getRemote());
+        }
 
         if (getUseTimeout()) {
             long timeout = getTimeoutValue(listener, env);

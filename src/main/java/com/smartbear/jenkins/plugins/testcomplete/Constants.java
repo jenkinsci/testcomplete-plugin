@@ -38,6 +38,7 @@ public class Constants {
     public static final String REPORTS_DIRECTORY_NAME = "tcreports";
     public static final String LOGX_FILE_EXTENSION = ".tclogx";
     public static final String HTMLX_FILE_EXTENSION = ".htmlx";
+    public static final String MHT_FILE_EXTENSION = ".mht";
     public static final String ERROR_FILE_EXTENSION = ".txt";
     public static final String ANY_CONSTANT = "any";
 

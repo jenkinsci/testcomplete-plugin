@@ -48,6 +48,10 @@ public class Workspace {
     private final FilePath masterHtmlXFilePath;
     private final FilePath slaveErrorFilePath;
 
+    private final FilePath masterLogDirectory;
+    private final FilePath slaveMHTFilePath;
+    private final FilePath masterMHTFilePath;
+
     public Workspace(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
 
@@ -58,15 +62,18 @@ public class Workspace {
 
         String logXName = this.logId + Constants.LOGX_FILE_EXTENSION;
         String htmlXName = this.logId + Constants.HTMLX_FILE_EXTENSION;
+        String mhtName = this.logId + Constants.MHT_FILE_EXTENSION;
 
         this.slaveLogXFilePath = new FilePath(slaveWorkspacePath, logXName);
         this.slaveHtmlXFilePath = new FilePath(slaveWorkspacePath, htmlXName);
+        this.slaveMHTFilePath = new FilePath(slaveWorkspacePath, mhtName);
 
         String buildId = build.getEnvironment(listener).get("BUILD_ID");
-        FilePath masterLogDirectory = getMasterLogDirectory(build, buildId);
+        this.masterLogDirectory = getMasterLogDirectory(build, buildId);
 
         this.masterLogXFilePath = new FilePath(masterLogDirectory, logXName);
         this.masterHtmlXFilePath = new FilePath(masterLogDirectory, htmlXName);
+        this.masterMHTFilePath = new FilePath(masterLogDirectory, mhtName);
 
         this.slaveErrorFilePath = new FilePath(slaveWorkspacePath, this.logId + Constants.ERROR_FILE_EXTENSION);
     }
@@ -150,4 +157,15 @@ public class Workspace {
         return slaveErrorFilePath;
     }
 
+    public FilePath getSlaveMHTFilePath() {
+        return slaveMHTFilePath;
+    }
+
+    public FilePath getMasterMHTFilePath() {
+        return masterMHTFilePath;
+    }
+
+    public FilePath getMasterLogDirectory() {
+        return masterLogDirectory;
+    }
 }

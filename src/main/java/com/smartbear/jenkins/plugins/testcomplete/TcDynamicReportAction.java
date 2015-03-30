@@ -42,7 +42,7 @@ import java.util.zip.ZipFile;
  */
 public class TcDynamicReportAction implements Action{
 
-    private final static String DOWNLOAD_FILE_NAME = "Test" + Constants.LOGX_FILE_EXTENSION;
+    private final static String DOWNLOAD_FILE_NAME = "Test";
 
     private final String baseReportsPath;
 
@@ -85,7 +85,14 @@ public class TcDynamicReportAction implements Action{
             return;
         }
 
+        String ext = null;
         if (parts.length == 1 && parts[0].endsWith(Constants.LOGX_FILE_EXTENSION)) {
+            ext = Constants.LOGX_FILE_EXTENSION;
+        } else if (parts.length == 1 && parts[0].endsWith(Constants.MHT_FILE_EXTENSION)) {
+            ext = Constants.MHT_FILE_EXTENSION;
+        }
+
+        if (ext != null) {
             String requestedFilePath = baseReportsPath + parts[0];
             File file = new File(requestedFilePath);
 
@@ -98,7 +105,7 @@ public class TcDynamicReportAction implements Action{
 
             try {
                 fis = new FileInputStream(file);
-                rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + "\"");
+                rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + ext + "\"");
                 rsp.serveFile(req, fis, file.lastModified(), 0, file.length(), "mime-type:application/force-download");
             } catch (IOException e) {
                 rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);

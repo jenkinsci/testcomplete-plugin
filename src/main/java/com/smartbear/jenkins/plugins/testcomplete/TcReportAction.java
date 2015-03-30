@@ -30,6 +30,7 @@ import hudson.model.Api;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
+
 import java.io.Serializable;
 
 /**
@@ -47,6 +48,7 @@ public class TcReportAction implements Action, Serializable {
 
     private String tcLogXFileName = "";
     private String htmlXFileName = "";
+    private String mhtFileName = "";
 
     private int exitCode = 0;
     private boolean result = true;
@@ -118,6 +120,14 @@ public class TcReportAction implements Action, Serializable {
         this.htmlXFileName = htmlXFileName;
     }
 
+    public String getMhtFileName() {
+        return mhtFileName;
+    }
+
+    public void setMhtFileName(String mhtFileName) {
+        this.mhtFileName = mhtFileName;
+    }
+
     @Exported(name="exitCode")
     public int getExitCode() {
         return exitCode;
@@ -169,6 +179,10 @@ public class TcReportAction implements Action, Serializable {
 
     public String getNoInfoMessage(String url) {
         return String.format(Messages.TcTestBuilder_NoInfo(), url);
+    }
+
+    public boolean hasMHTReport() {
+        return (mhtFileName != null && !mhtFileName.isEmpty());
     }
 
 }

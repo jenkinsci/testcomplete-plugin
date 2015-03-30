@@ -63,7 +63,10 @@
                             <td>${r.logInfo.errorCount}</td>
                             <td>
                                 <j:if test="${r.tcLogXFileName != ''}">
-                                    <a href="dynamic/${r.tcLogXFileName}" title="Download Log File"><img border="0" alt="Download the log file" src="${rootURL}/plugin/${it.getPluginName()}/images/download.png"/></a>
+                                    <a href="dynamic/${r.tcLogXFileName}" title="Download Log File (tcLogX)"><img border="0" alt="Download the log file (tcLogX)" src="${rootURL}/plugin/${it.getPluginName()}/images/download.png"/></a>
+                                </j:if>
+                                <j:if test="${r.hasMHTReport()}">
+                                    <a style="padding-left:5px;" href="dynamic/${r.mhtFileName}" title="Download Log File (MHT)"><img border="0" alt="Download the log file (MHT)" src="${rootURL}/plugin/${it.getPluginName()}/images/download-mht.png"/></a>
                                 </j:if>
                             </td>
 

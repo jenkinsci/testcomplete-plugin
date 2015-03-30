@@ -43,6 +43,8 @@ public class TcLogInfo {
     private final int errorCount;
     private final int warningCount;
 
+    private String XML = null;
+
     public TcLogInfo(long startTime, long stopTime, int testCount, int errorCount, int warningCount) {
         this.startTime = startTime;
         this.stopTime = stopTime;
@@ -98,4 +100,11 @@ public class TcLogInfo {
         return String.format("%d:%02d:%02d", h,m,s);
     }
 
+    public String getXML() {
+        return XML;
+    }
+
+    public void setXML(String XML) {
+        this.XML = XML;
+    }
 }
