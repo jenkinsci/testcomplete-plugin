@@ -26,23 +26,37 @@
                         <tr>
 
                             <td style="text-align:left;">
-                                <j:if test="${r.exitCode == 0}">
-                                    <img src="${rootURL}/plugin/${it.getPluginName()}/images/ok.png"/>
-                                </j:if>
-                                <j:if test="${r.exitCode == 1}">
-                                    <img src="${rootURL}/plugin/${it.getPluginName()}/images/warn.png"/>
-                                </j:if>
-                                <j:if test="${r.exitCode != 0 &amp;&amp; r.exitCode != 1}">
+
+                                <j:if test="${r.startFailed}">
                                     <img src="${rootURL}/plugin/${it.getPluginName()}/images/error.png"/>
                                 </j:if>
 
+                                <j:if test="${!r.startFailed}">
+                                    <j:if test="${r.exitCode == 0}">
+                                        <img src="${rootURL}/plugin/${it.getPluginName()}/images/ok.png"/>
+                                    </j:if>
+                                    <j:if test="${r.exitCode == 1}">
+                                        <img src="${rootURL}/plugin/${it.getPluginName()}/images/warn.png"/>
+                                    </j:if>
+                                    <j:if test="${r.exitCode != 0 &amp;&amp; r.exitCode != 1}">
+                                        <img src="${rootURL}/plugin/${it.getPluginName()}/images/error.png"/>
+                                    </j:if>
+                                </j:if>
+
                                 <span style="padding-left:15px;">
-                                    <j:if test="${r.result}">
-                                        ${%Passed}
+
+                                    <j:if test="${r.startFailed}">
+                                        ${%StartFailed}
                                     </j:if>
 
-                                    <j:if test="${!r.result}">
-                                        ${%Failed}
+                                    <j:if test="${!r.startFailed}">
+                                        <j:if test="${r.result}">
+                                            ${%Passed}
+                                        </j:if>
+
+                                        <j:if test="${!r.result}">
+                                            ${%Failed}
+                                        </j:if>
                                     </j:if>
                                 </span>
                             </td>

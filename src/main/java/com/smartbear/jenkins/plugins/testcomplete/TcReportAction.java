@@ -52,6 +52,7 @@ public class TcReportAction implements Action, Serializable {
 
     private int exitCode = 0;
     private boolean result = true;
+    private boolean startFailed = false;
     private String error = "";
 
     private TcLogInfo logInfo = null;
@@ -144,6 +145,15 @@ public class TcReportAction implements Action, Serializable {
 
     public void setResult(boolean result) {
         this.result = result;
+    }
+
+    @Exported(name="failedToStart")
+    public boolean getStartFailed() {
+        return startFailed;
+    }
+
+    public void setStartFailed(boolean startFailed) {
+        this.startFailed = startFailed;
     }
 
     @Exported(name="error")

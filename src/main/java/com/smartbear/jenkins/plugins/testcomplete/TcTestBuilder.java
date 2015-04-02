@@ -380,6 +380,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         } finally {
             tcReportAction.setExitCode(exitCode);
             tcReportAction.setResult(result);
+            String tcLogXFileName = tcReportAction.getTcLogXFileName();
+            tcReportAction.setStartFailed(tcLogXFileName == null || tcLogXFileName.isEmpty());
             TcSummaryAction currentAction = getOrCreateAction(build);
             currentAction.addReport(tcReportAction);
             if (getPublishJUnitReports()) {
@@ -553,17 +555,19 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         //copying mht file
 
-        if (getGenerateMHT() && workspace.getSlaveMHTFilePath().exists()) {
-            try {
-                workspace.getSlaveMHTFilePath().copyTo(workspace.getMasterMHTFilePath());
-                String logFileName = workspace.getMasterMHTFilePath().getName();
-                testResult.setMhtFileName(logFileName);
-            } finally {
-                workspace.getSlaveMHTFilePath().delete();
+        if (getGenerateMHT()) {
+            if (workspace.getSlaveMHTFilePath().exists()) {
+                try {
+                    workspace.getSlaveMHTFilePath().copyTo(workspace.getMasterMHTFilePath());
+                    String logFileName = workspace.getMasterMHTFilePath().getName();
+                    testResult.setMhtFileName(logFileName);
+                } finally {
+                    workspace.getSlaveMHTFilePath().delete();
+                }
+            } else {
+                TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
+                        workspace.getSlaveMHTFilePath().getName());
             }
-        } else {
-            TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
-                    workspace.getSlaveMHTFilePath().getName());
         }
     }
 
