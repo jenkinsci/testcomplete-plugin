@@ -332,6 +332,10 @@ public class TcLogParser {
         return !"0".equals(status) && !"1".equals(status);
     }
 
+    private String fixTestCaseName(String name) {
+        return name.replace(" Log [", " [");
+    }
+
     private void convertToXML(ZipFile logArchive, TcLogInfo logInfo, XMLStreamWriter writer)
             throws ParsingException, XMLStreamException {
         writer.writeStartDocument("utf-8", "1.0");
@@ -389,7 +393,7 @@ public class TcLogParser {
             writer.writeAttribute("time", testCaseDuration);
 
             writer.writeStartElement("testcase");
-            writer.writeAttribute("name", testCaseName);
+            writer.writeAttribute("name", fixTestCaseName(testCaseName));
             writer.writeAttribute("classname", suite + "." + project);
             writer.writeAttribute("time", testCaseDuration);
             if (checkFail(NodeUtils.getTextProperty(rootOwnerNode, "status"))) {
