@@ -59,12 +59,14 @@ public class TcLogParser {
     private final String suite;
     private final String project;
     private final boolean generateJUnitReports;
+    private boolean errorOnWarnings;
 
-    public TcLogParser(File log, String suite, String project, boolean generateJUnitReports) {
+    public TcLogParser(File log, String suite, String project, boolean generateJUnitReports, boolean errorOnWarnings) {
         this.log = log;
         this.suite = suite;
         this.project = project;
         this.generateJUnitReports = generateJUnitReports;
+        this.errorOnWarnings = errorOnWarnings;
     }
 
     public static class ParsingException extends IOException {
@@ -104,6 +106,14 @@ public class TcLogParser {
         }
 
         static public List<String> getErrorMessages(Node node) {
+            return getMessages(node, "3");
+        }
+
+        static public List<String> getWarningMessages(Node node) {
+            return getMessages(node, "2");
+        }
+
+        static public List<String> getMessages(Node node, String status) {
             List<String> result = new LinkedList<String>();
 
             // using TreeMap for sorting messages order
@@ -127,7 +137,7 @@ public class TcLogParser {
                         }
 
                         String type = getTextProperty(childNode, "type");
-                        if ("3".equals(type)) {
+                        if (status.equals(type)) {
                             String message = getTextProperty(childNode, "message");
                             if (message != null && !message.isEmpty()) {
                                 orderedResult.put(index, message);
@@ -329,6 +339,9 @@ public class TcLogParser {
     }
 
     private boolean checkFail(String status) {
+        if (errorOnWarnings) {
+            return !"0".equals(status);
+        }
         return !"0".equals(status) && !"1".equals(status);
     }
 
@@ -398,8 +411,14 @@ public class TcLogParser {
             writer.writeAttribute("time", testCaseDuration);
             if (checkFail(NodeUtils.getTextProperty(rootOwnerNode, "status"))) {
                 writer.writeStartElement("failure");
+
+                List<String> messages = NodeUtils.getErrorMessages(rootOwnerNodeInfo);
+                if (errorOnWarnings) {
+                    messages.addAll(NodeUtils.getWarningMessages(rootOwnerNodeInfo));
+                }
+
                 writer.writeAttribute("message",
-                        StringUtils.join(NodeUtils.getErrorMessages(rootOwnerNodeInfo), "\n\n"));
+                        StringUtils.join(messages, "\n\n"));
                 writer.writeEndElement(); //failure
             }
             writer.writeEndElement(); //testcase
@@ -443,8 +462,14 @@ public class TcLogParser {
             Node testDetailsNode = NodeUtils.getRootDocumentNodeFromArchive(logArchive,
                     NodeUtils.getTextProperty(logDataRowNode, "details"));
             writer.writeStartElement("failure");
+
+            List<String> messages = NodeUtils.getErrorMessages(testDetailsNode);
+            if (errorOnWarnings) {
+                messages.addAll(NodeUtils.getWarningMessages(testDetailsNode));
+            }
+
             writer.writeAttribute("message",
-                    StringUtils.join(NodeUtils.getErrorMessages(testDetailsNode), "\n\n"));
+                    StringUtils.join(messages, "\n\n"));
             writer.writeEndElement(); //failure
         }
         writer.writeEndElement(); //testcase

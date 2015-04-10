@@ -524,8 +524,9 @@ public class TcTestBuilder extends Builder implements Serializable {
                 testResult.setTcLogXFileName(logFileName);
                 EnvVars env = build.getEnvironment(listener);
                 String suiteFileName = new FilePath(new File(env.expand(getSuite()))).getBaseName();
+                boolean errorOnWarnings = BuildStepAction.MAKE_FAILED.name().equals(actionOnWarnings);
                 TcLogParser tcLogParser = new TcLogParser(new File(workspace.getMasterLogXFilePath().getRemote()),
-                        suiteFileName, env.expand(getProject()), getPublishJUnitReports());
+                        suiteFileName, env.expand(getProject()), getPublishJUnitReports(), errorOnWarnings);
                 testResult.setLogInfo(tcLogParser.parse(listener));
             } finally {
                 workspace.getSlaveLogXFilePath().delete();
