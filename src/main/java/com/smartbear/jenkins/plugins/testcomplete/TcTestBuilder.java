@@ -140,10 +140,9 @@ public class TcTestBuilder extends Builder implements Serializable {
         this.publishJUnitReports = publishJUnitReports;
     }
 
-    // Do not launch more than one build (TC can not be launched more than once)
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
-        return BuildStepMonitor.BUILD;
+        return BuildStepMonitor.NONE;
     }
 
     public String getSuite() {
@@ -382,10 +381,19 @@ public class TcTestBuilder extends Builder implements Serializable {
             tcReportAction.setResult(result);
             String tcLogXFileName = tcReportAction.getTcLogXFileName();
             tcReportAction.setStartFailed(tcLogXFileName == null || tcLogXFileName.isEmpty());
-            TcSummaryAction currentAction = getOrCreateAction(build);
-            currentAction.addReport(tcReportAction);
-            if (getPublishJUnitReports()) {
-                publishResult(build, listener, workspace, tcReportAction);
+
+            // synchronize test result publishing
+            CheckPoint cp = new CheckPoint(TcTestBuilder.class.getName());
+            try {
+                cp.block(listener, getDescriptor().getDisplayName());
+
+                TcSummaryAction currentAction = getOrCreateAction(build);
+                currentAction.addReport(tcReportAction);
+                if (getPublishJUnitReports()) {
+                    publishResult(build, listener, workspace, tcReportAction);
+                }
+            } finally {
+                cp.report();
             }
         }
 
