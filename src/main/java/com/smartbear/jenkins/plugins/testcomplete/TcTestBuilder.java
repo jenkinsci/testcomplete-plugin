@@ -803,6 +803,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         public ListBoxModel doFillExecutorVersionItems() {
             ListBoxModel model = new ListBoxModel();
             model.add(Messages.TcTestBuilder_Descriptor_LatestTagText(), Constants.ANY_CONSTANT);
+            model.add("11", "11.0");
             model.add("10", "10.0");
             model.add("9", "9.0");
             return model;
