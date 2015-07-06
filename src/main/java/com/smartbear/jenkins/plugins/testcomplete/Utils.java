@@ -66,6 +66,32 @@ public class Utils {
         }
     }
 
+    public static boolean IsLaunchedAsSystemUser(VirtualChannel channel, final BuildListener listener) {
+        try {
+            return channel.call(new Callable<Boolean, Exception>() {
+                public Boolean call() throws Exception {
+
+                    // Trying to check whether we are running on System account
+
+                    String winDir = System.getenv("WINDIR");
+                    if (winDir == null) {
+                        return false;
+                    }
+
+                    String userProfile = System.getenv("USERPROFILE");
+                    if (userProfile == null) {
+                        return false;
+                    }
+
+                    return userProfile.startsWith(winDir);
+                }
+            });
+        } catch (Exception e) {
+            TcLog.error(listener, Messages.TcTestBuilder_RemoteCallingFailed(), e);
+            return false;
+        }
+    }
+
     public static long getSystemTime(VirtualChannel channel, BuildListener listener) {
         try {
             return channel.call(new Callable<Long, Exception>() {

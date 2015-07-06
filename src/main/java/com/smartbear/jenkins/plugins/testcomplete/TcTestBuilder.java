@@ -282,7 +282,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         // Making the command line
         ArgumentListBuilder args = makeCommandLineArgs(build, launcher, listener, workspace, chosenInstallation);
 
-        boolean isJNLPSlave = !build.getBuiltOn().toComputer().isLaunchSupported();
+        boolean isJNLPSlave = !build.getBuiltOn().toComputer().isLaunchSupported() &&
+                !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
 
         if (isJNLPSlave && useTCService) {
             TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithJNLP());
@@ -321,6 +322,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         int exitCode = -2;
         boolean result = false;
 
+        Proc process = null;
         try {
             TcLog.info(listener, Messages.TcTestBuilder_LaunchingTestRunner());
 
@@ -337,11 +339,14 @@ public class TcTestBuilder extends Builder implements Serializable {
 
             Launcher.ProcStarter processStarter = launcher.launch().cmds(args).envs(build.getEnvironment(listener));
 
+            process = processStarter.start();
+
             if (realTimeout == -1) {
-                exitCode = processStarter.start().join();
+                exitCode = process.join();
             } else {
-                exitCode = processStarter.start().joinWithTimeout(realTimeout, TimeUnit.SECONDS, listener);
+                exitCode = process.joinWithTimeout(realTimeout, TimeUnit.SECONDS, listener);
             }
+            process = null;
 
             String exitCodeDescription = getExitCodeDescription(exitCode);
             TcLog.info(listener, Messages.TcTestBuilder_ExitCodeMessage(),
@@ -377,6 +382,10 @@ public class TcTestBuilder extends Builder implements Serializable {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(),
                     e.getCause() == null ? e.toString() : e.getCause().toString());
         } finally {
+            if (process != null) {
+                process.kill();
+            }
+
             tcReportAction.setExitCode(exitCode);
             tcReportAction.setResult(result);
             String tcLogXFileName = tcReportAction.getTcLogXFileName();
@@ -408,7 +417,7 @@ public class TcTestBuilder extends Builder implements Serializable {
     private void publishResult(AbstractBuild build, BuildListener listener,
                                Workspace workspace, TcReportAction tcReportAction) {
 
-        if (tcReportAction.getLogInfo().getXML() == null) {
+        if (tcReportAction.getLogInfo() == null || tcReportAction.getLogInfo().getXML() == null) {
             TcLog.warning(listener, Messages.TcTestBuilder_UnableToPublishTestData());
             return;
         }
