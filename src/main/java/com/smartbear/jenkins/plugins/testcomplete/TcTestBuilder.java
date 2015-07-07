@@ -92,6 +92,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         MAKE_FAILED
     }
 
+    private static Utils.BusyNodeList busyNodes = new Utils.BusyNodeList();
+
     @DataBoundConstructor
     public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
                          String actionOnWarnings, String actionOnErrors, boolean useTimeout, String timeout,
@@ -219,6 +221,18 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     @Override
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener)
+            throws IOException, InterruptedException {
+
+        Node currentNode = build.getBuiltOn();
+        busyNodes.lock(currentNode, listener);
+        try {
+            return performInternal(build, launcher, listener);
+        } finally {
+            busyNodes.release(currentNode);
+        }
+    }
+
+    public boolean performInternal(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
 
         final PrintStream logger = listener.getLogger();
@@ -381,6 +395,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(),
                     e.getCause() == null ? e.toString() : e.getCause().toString());
+            TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
+            build.setResult(Result.FAILURE);
         } finally {
             if (process != null) {
                 process.kill();
@@ -391,18 +407,10 @@ public class TcTestBuilder extends Builder implements Serializable {
             String tcLogXFileName = tcReportAction.getTcLogXFileName();
             tcReportAction.setStartFailed(tcLogXFileName == null || tcLogXFileName.isEmpty());
 
-            // synchronize test result publishing
-            CheckPoint cp = new CheckPoint(TcTestBuilder.class.getName());
-            try {
-                cp.block(listener, getDescriptor().getDisplayName());
-
-                TcSummaryAction currentAction = getOrCreateAction(build);
-                currentAction.addReport(tcReportAction);
-                if (getPublishJUnitReports()) {
-                    publishResult(build, listener, workspace, tcReportAction);
-                }
-            } finally {
-                cp.report();
+            TcSummaryAction currentAction = getOrCreateAction(build);
+            currentAction.addReport(tcReportAction);
+            if (getPublishJUnitReports()) {
+                publishResult(build, listener, workspace, tcReportAction);
             }
         }
 
@@ -436,23 +444,25 @@ public class TcTestBuilder extends Builder implements Serializable {
             fos.close();
             fos = null;
 
-            TestResultAction testResultAction = getTestResultAction(build);
+            synchronized (build) {
+                TestResultAction testResultAction = getTestResultAction(build);
 
-            boolean testResultActionExists = true;
-            if (testResultAction == null) {
-                testResultActionExists = false;
-                TestResult testResult = new hudson.tasks.junit.TestResult(true);
-                testResult.parse(reportFile);
-                testResultAction = new TestResultAction(build, testResult, listener);
-            } else {
-                TestResult testResult = testResultAction.getResult();
-                testResult.parse(reportFile);
-                testResult.tally();
-                testResultAction.setResult(testResult, listener);
-            }
+                boolean testResultActionExists = true;
+                if (testResultAction == null) {
+                    testResultActionExists = false;
+                    TestResult testResult = new hudson.tasks.junit.TestResult(true);
+                    testResult.parse(reportFile);
+                    testResultAction = new TestResultAction(build, testResult, listener);
+                } else {
+                    TestResult testResult = testResultAction.getResult();
+                    testResult.parse(reportFile);
+                    testResult.tally();
+                    testResultAction.setResult(testResult, listener);
+                }
 
-            if (!testResultActionExists) {
-                build.getActions().add(testResultAction);
+                if (!testResultActionExists) {
+                    build.getActions().add(testResultAction);
+                }
             }
 
 

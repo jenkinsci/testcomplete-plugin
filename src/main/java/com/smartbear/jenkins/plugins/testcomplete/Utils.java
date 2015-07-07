@@ -25,16 +25,22 @@
 package com.smartbear.jenkins.plugins.testcomplete;
 
 import hudson.model.BuildListener;
+import hudson.model.Node;
 import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
 
 import javax.crypto.Cipher;
+import java.lang.ref.WeakReference;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 public class Utils {
 
@@ -171,5 +177,67 @@ public class Utils {
             reversedData[i] = data[length - 1 - i];
         }
         return reversedData;
+    }
+
+    public static class BusyNodeList {
+
+        private Map<WeakReference<Node>, Semaphore> nodeLocks = new HashMap<WeakReference<Node>, Semaphore>();
+
+        public void lock(Node node, BuildListener listener) throws InterruptedException {
+            Semaphore semaphore = null;
+            synchronized (this) {
+                for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
+                    Node actualNode = nodeRef.get();
+                    if (actualNode != null && actualNode == node) {
+                        semaphore = nodeLocks.get(nodeRef);
+                    }
+                }
+
+                if (semaphore == null) {
+                    semaphore = new Semaphore(1, true);
+                    nodeLocks.put(new WeakReference<Node>(node), semaphore);
+                } else {
+                    listener.getLogger().println();
+                    TcLog.info(listener, Messages.TcTestBuilder_WaitingForNodeRelease());
+                }
+            }
+
+            semaphore.acquire();
+        }
+
+        public void release(Node node) throws InterruptedException {
+            Semaphore semaphore = null;
+            synchronized (this) {
+                for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
+                    Node actualNode = nodeRef.get();
+                    if (actualNode != null && actualNode == node) {
+                        semaphore = nodeLocks.get(nodeRef);
+                    }
+                }
+            }
+            if (semaphore != null) {
+                semaphore.release();
+            }
+
+            // cleanup the unused items
+            synchronized (this) {
+                Thread.sleep(200);
+                List<WeakReference<Node>> toRemove = new ArrayList<WeakReference<Node>>();
+
+                for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
+                    Node actualNode = nodeRef.get();
+                    if (actualNode != null && actualNode == node) {
+                        semaphore = nodeLocks.get(nodeRef);
+                        if (semaphore.availablePermits() > 0) {
+                            toRemove.add(nodeRef);
+                        }
+                    }
+                }
+
+                for (WeakReference<Node> nodeRef : toRemove) {
+                    nodeLocks.remove(nodeRef);
+                }
+            }
+        }
     }
 }
