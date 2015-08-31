@@ -399,7 +399,11 @@ public class TcTestBuilder extends Builder implements Serializable {
             build.setResult(Result.FAILURE);
         } finally {
             if (process != null) {
-                process.kill();
+                try {
+                    process.kill();
+                } catch (Exception e) {
+                    // Do nothing
+                }
             }
 
             tcReportAction.setExitCode(exitCode);
