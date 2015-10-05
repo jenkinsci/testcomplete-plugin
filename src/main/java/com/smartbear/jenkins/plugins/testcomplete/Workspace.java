@@ -27,9 +27,7 @@ package com.smartbear.jenkins.plugins.testcomplete;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.FreeStyleProject;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +37,6 @@ import java.io.IOException;
  */
 public class Workspace {
 
-    private final FilePath masterWorkspacePath;
     private final FilePath slaveWorkspacePath;
     private final String logId;
     private final FilePath slaveLogXFilePath;
@@ -55,7 +52,6 @@ public class Workspace {
     public Workspace(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
 
-        this.masterWorkspacePath = getMasterWorkspace(build);
         this.slaveWorkspacePath = getSlaveWorkspace(build, launcher, listener);
 
         this.logId = Long.toString(System.currentTimeMillis() % 10000000);
@@ -68,8 +64,7 @@ public class Workspace {
         this.slaveHtmlXFilePath = new FilePath(slaveWorkspacePath, htmlXName);
         this.slaveMHTFilePath = new FilePath(slaveWorkspacePath, mhtName);
 
-        String buildId = build.getEnvironment(listener).get("BUILD_ID");
-        this.masterLogDirectory = getMasterLogDirectory(build, buildId);
+        this.masterLogDirectory = getMasterLogDirectory(build);
 
         this.masterLogXFilePath = new FilePath(masterLogDirectory, logXName);
         this.masterHtmlXFilePath = new FilePath(masterLogDirectory, htmlXName);
@@ -78,30 +73,7 @@ public class Workspace {
         this.slaveErrorFilePath = new FilePath(slaveWorkspacePath, this.logId + Constants.ERROR_FILE_EXTENSION);
     }
 
-    private FilePath getMasterWorkspace(AbstractBuild build)
-            throws IOException, InterruptedException {
-
-        AbstractProject project = build.getProject();
-        FilePath projectWorkspaceOnMaster;
-
-        if (project instanceof FreeStyleProject) {
-            FreeStyleProject freeStyleProject = (FreeStyleProject) project;
-
-            if (freeStyleProject.getCustomWorkspace() != null &&
-                    freeStyleProject.getCustomWorkspace().length() > 0) {
-                projectWorkspaceOnMaster = new FilePath(new File(freeStyleProject.getCustomWorkspace()));
-            } else {
-                projectWorkspaceOnMaster = new FilePath(new File(freeStyleProject.getRootDir(), "workspace"));
-            }
-        } else {
-            projectWorkspaceOnMaster = new FilePath(new File(project.getRootDir(), "workspace"));
-        }
-
-        projectWorkspaceOnMaster.mkdirs();
-        return projectWorkspaceOnMaster;
-    }
-
-    private FilePath getMasterLogDirectory(AbstractBuild build, String buildId)
+    private FilePath getMasterLogDirectory(AbstractBuild build)
             throws IOException, InterruptedException {
 
         String buildDir = build.getRootDir().getAbsolutePath();
@@ -122,11 +94,7 @@ public class Workspace {
 
         FilePath projectWorkspaceOnSlave = new FilePath(launcher.getChannel(), workspacePath);
         projectWorkspaceOnSlave.mkdirs();
-        return projectWorkspaceOnSlave;
-    }
-
-    public FilePath getMasterWorkspacePath() {
-        return masterWorkspacePath;
+        return projectWorkspaceOnSlave.absolutize();
     }
 
     public FilePath getSlaveWorkspacePath() {
