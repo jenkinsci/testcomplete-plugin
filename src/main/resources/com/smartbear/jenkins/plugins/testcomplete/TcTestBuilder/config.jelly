@@ -54,6 +54,9 @@
         <f:entry title="${%Executor}" field="executorType">
           <f:select />
         </f:entry>
+        <f:entry title="${%ExecutorPath}" field="executorPath">
+          <f:textbox />
+        </f:entry>
         <f:entry title="${%Version}" field="executorVersion">
           <f:select />
         </f:entry>
