@@ -75,6 +75,26 @@ public class TcLogParser {
         }
     }
 
+    private static class Pair<K, V> {
+
+        private final K key;
+        private final V value;
+
+        public Pair(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public K getKey() {
+            return key;
+        }
+
+        public V getValue() {
+            return value;
+        }
+
+    }
+
     private static class NodeUtils {
         static public String getTextAttribute(Node node, String name) {
             if (node == null) {
@@ -245,12 +265,12 @@ public class TcLogParser {
             List<Node> result = new ArrayList<Node>();
 
             List<String> childrenKeys = new ArrayList<String>();
-            Node childrenNode = findNamedNode(root.getChildNodes(), "children");
-            if (childrenNode != null) {
-                NodeList childrenNodeProperties = childrenNode.getChildNodes();
-                for (int i = 0; i < childrenNodeProperties.getLength(); i++) {
-                    Node childrenNodeProperty = childrenNodeProperties.item(i);
-                    String childKey = getTextAttribute(childrenNodeProperty, "value");
+            Node childNode = findNamedNode(root.getChildNodes(), "children");
+            if (childNode != null) {
+                NodeList childNodeProperties = childNode.getChildNodes();
+                for (int i = 0; i < childNodeProperties.getLength(); i++) {
+                    Node childNodeProperty = childNodeProperties.item(i);
+                    String childKey = getTextAttribute(childNodeProperty, "value");
                     if (childKey != null && !childKey.isEmpty()) {
                         childrenKeys.add(childKey);
                     }
@@ -263,6 +283,74 @@ public class TcLogParser {
                     String nodeMoniker = getTextProperty(node, "moniker");
                     if (childKey.equals(nodeMoniker)) {
                         result.add(node);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        static public boolean isProjectItem(ZipFile archive, Node node) {
+            String fileName = getTextProperty(node, "filename");
+            Node nodeInfo = getRootDocumentNodeFromArchive(archive, fileName);
+            Node logDataRowNode = NodeUtils.findNamedNode(nodeInfo, "status");
+
+            if (logDataRowNode == null) {
+                return true;
+            }
+
+            return false;
+        }
+
+        static public List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) throws Exception {
+            List<String> childrenKeys = new ArrayList<String>();
+            Node childNode = findNamedNode(root.getChildNodes(), "children");
+            if (childNode != null) {
+                NodeList childNodeProperties = childNode.getChildNodes();
+                for (int i = 0; i < childNodeProperties.getLength(); i++) {
+                    Node childNodeProperty = childNodeProperties.item(i);
+                    String childKey = getTextAttribute(childNodeProperty, "value");
+                    if (childKey != null && !childKey.isEmpty()) {
+                        childrenKeys.add(childKey);
+                    }
+                }
+            }
+
+            List<Node> subItems = new ArrayList<Node>();
+
+            for (String childKey : childrenKeys) {
+                for (int j = 0; j < nodes.getLength(); j++) {
+                    Node node = nodes.item(j);
+                    String nodeMoniker = getTextProperty(node, "moniker");
+                    if (childKey.equals(nodeMoniker)) {
+                        subItems.add(node);
+                    }
+                }
+            }
+
+            if (subItems.isEmpty() && isProjectItem(archive, root)) {
+                return null;
+            }
+
+            List<Pair<String, Node>> result = new ArrayList<Pair<String, Node>>();
+
+            // search sub items
+            for (Node node : subItems) {
+                try {
+                    String subNodeName = NodeUtils.getTextProperty(node, "name");
+                    List<Pair<String, Node>> children = findChildNodesRecursively(archive, node, nodes,
+                            "".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName);
+
+                    if (children == null) {
+                        throw new Exception();
+                    } else if (!children.isEmpty()) {
+                        result.addAll(children);
+                    } else if (isProjectItem(archive, node)){
+                        result.add(new Pair<String, Node>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
+                    }
+                } catch (Exception e) {
+                    if (!nodeName.equals("")) {
+                        throw e;
                     }
                 }
             }
@@ -373,7 +461,7 @@ public class TcLogParser {
         }
 
         boolean isSuite = "{00000000-0000-0000-0000-000000000000}".
-             equals(NodeUtils.getTextProperty(rootOwnerNode, "projectkey"));
+                equals(NodeUtils.getTextProperty(rootOwnerNode, "projectkey"));
 
         Node rootOwnerNodeInfo = NodeUtils.getRootDocumentNodeFromArchive(logArchive,
                 NodeUtils.getTextProperty(rootOwnerNode, "filename"));
@@ -417,8 +505,7 @@ public class TcLogParser {
                     messages.addAll(NodeUtils.getWarningMessages(rootOwnerNodeInfo));
                 }
 
-                writer.writeAttribute("message",
-                        StringUtils.join(messages, "\n\n"));
+                writer.writeAttribute("message", StringUtils.join(messages, "\n\n"));
                 writer.writeEndElement(); //failure
             }
             writer.writeEndElement(); //testcase
@@ -431,10 +518,8 @@ public class TcLogParser {
         writer.writeEndDocument();
     }
 
-    private void processItem(ZipFile logArchive, Node node, String projectName, XMLStreamWriter writer)
+    private void processItem(ZipFile logArchive, Node node, String projectName, XMLStreamWriter writer, String name)
             throws ParsingException, XMLStreamException {
-        String name = NodeUtils.getTextProperty(node, "name");
-
         Node nodeInfo = NodeUtils.getRootDocumentNodeFromArchive(logArchive,
                 NodeUtils.getTextProperty(node, "filename"));
 
@@ -444,7 +529,7 @@ public class TcLogParser {
 
         Node logDataRowNode = NodeUtils.findNamedNode(NodeUtils.findNamedNode(nodeInfo, "log data"), "row0");
         if (logDataRowNode == null) {
-            throw new ParsingException("Unable to obtain log data->row0 node for item.");
+            throw new ParsingException("Unable to obtain log data->row0 node for item with name '" + name + "'.");
         }
 
         writer.writeStartElement("testcase");
@@ -468,8 +553,7 @@ public class TcLogParser {
                 messages.addAll(NodeUtils.getWarningMessages(testDetailsNode));
             }
 
-            writer.writeAttribute("message",
-                    StringUtils.join(messages, "\n\n"));
+            writer.writeAttribute("message", StringUtils.join(messages, "\n\n"));
             writer.writeEndElement(); //failure
         }
         writer.writeEndElement(); //testcase
@@ -495,6 +579,14 @@ public class TcLogParser {
             throw new ParsingException("Unable to obtain filename for project node.");
         }
 
+        List<Pair<String, Node>> items = null;
+
+        try {
+            items = NodeUtils.findChildNodesRecursively(logArchive, rootOwnerNode, rootOwnerNode.getParentNode().getChildNodes(), "");
+        } catch (Exception e) {
+            items = new ArrayList<Pair<String, Node>>();
+        }
+
         writer.writeStartElement("testsuite");
         writer.writeAttribute("name", projectName);
         writer.writeAttribute("failures", failedTests);
@@ -502,10 +594,10 @@ public class TcLogParser {
         writer.writeAttribute("time", Double.toString(projectDuration / 1000f));
         writer.writeAttribute("timestamp", timestamp);
 
-        List<Node> items = NodeUtils.findChildNodes(rootOwnerNode, rootOwnerNode.getParentNode().getChildNodes());
-        for (Node node : items) {
-            processItem(logArchive, node, projectName, writer);
+        for (Pair<String, Node> pair : items) {
+            processItem(logArchive, pair.getValue(), projectName, writer, pair.getKey());
         }
+
         writer.writeEndElement(); //testcase
     }
 
