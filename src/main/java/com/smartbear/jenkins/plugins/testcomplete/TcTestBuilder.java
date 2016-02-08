@@ -71,6 +71,7 @@ public class TcTestBuilder extends Builder implements Serializable {
     private final String test;
 
     private final String executorType;
+    private final String executorPath;
     private final String executorVersion;
 
     private final String actionOnWarnings;
@@ -95,7 +96,7 @@ public class TcTestBuilder extends Builder implements Serializable {
     private static Utils.BusyNodeList busyNodes = new Utils.BusyNodeList();
 
     @DataBoundConstructor
-    public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
+    public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorPath, String executorVersion,
                          String actionOnWarnings, String actionOnErrors, boolean useTimeout, String timeout,
                          boolean useTCService, String userName, String userPassword, boolean useActiveSession,
                          boolean generateMHT, boolean publishJUnitReports) {
@@ -116,6 +117,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         this.executorType = executorType != null ? executorType : Constants.ANY_CONSTANT;
+        this.executorPath = executorPath;
         this.executorVersion = executorVersion != null ? executorVersion : Constants.ANY_CONSTANT;
         this.actionOnWarnings = actionOnWarnings != null ? actionOnWarnings : BuildStepAction.NONE.toString();
         this.actionOnErrors = actionOnErrors != null ? actionOnErrors : BuildStepAction.MAKE_UNSTABLE.toString();
@@ -173,6 +175,10 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     public String getExecutorType() {
         return executorType;
+    }
+
+    public String getExecutorPath() {
+        return executorPath;
     }
 
     public String getExecutorVersion() {
@@ -259,19 +265,39 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         // Search required TC/TE installation
+        TcInstallation chosenInstallation = null;
+        if(getExecutorPath() != null && !getExecutorPath().isEmpty()) {
+            TcLog.info(listener, "Using static Executor version on path %1$s", getExecutorPath());
+            // Select TestExecute if no specific version has been given
+            TcInstallation.ExecutorType type = TcInstallation.ExecutorType.TE;
+            if(getExecutorType().equals(Constants.ANY_CONSTANT)) {
+                TcLog.info(listener, "Runner type not set, assuming TestExecute");
+            } else if(getExecutorType().equals("TestComplete")) {
+                type = TcInstallation.ExecutorType.TC;
+            }
+            // Select version 11.0 if no specific version has been given
+            String executorVersion = getExecutorVersion();
+            if(executorVersion.equals(Constants.ANY_CONSTANT)) {
+                executorVersion = "11.0";
+                TcLog.info(listener, "Version not set, assuming version %1$s", executorVersion);
+            }
 
-        final TcInstallationsScanner scanner = new TcInstallationsScanner(launcher.getChannel(), listener);
-        List<TcInstallation> installations = scanner.getInstallations();
+            chosenInstallation = new TcInstallation(getExecutorPath(), type, executorVersion);
+        } else {
+            TcLog.info(listener, "Searching for TestComplete/TestExecute installations. This only works if you have Windows Registry support built into your Jenkins master");
+            final TcInstallationsScanner scanner = new TcInstallationsScanner(launcher.getChannel(), listener);
+            List<TcInstallation> installations = scanner.getInstallations();
 
-        StringBuilder msgBuilder = new StringBuilder();
-        msgBuilder.append(Messages.TcTestBuilder_FoundedInstallations());
-        for (TcInstallation i : installations) {
-            msgBuilder.append("\n\t").append(i);
+            StringBuilder msgBuilder = new StringBuilder();
+            msgBuilder.append(Messages.TcTestBuilder_FoundedInstallations());
+            for (TcInstallation i : installations) {
+                msgBuilder.append("\n\t").append(i);
+            }
+
+            TcLog.info(listener, msgBuilder.toString());
+
+            chosenInstallation = scanner.findInstallation(installations, getExecutorType(), getExecutorVersion());
         }
-
-        TcLog.info(listener, msgBuilder.toString());
-
-        final TcInstallation chosenInstallation = scanner.findInstallation(installations, getExecutorType(), getExecutorVersion());
 
         if (chosenInstallation == null) {
             TcLog.error(listener, Messages.TcTestBuilder_InstallationNotFound());
