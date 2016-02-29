@@ -302,7 +302,7 @@ public class TcLogParser {
             return false;
         }
 
-        static public List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) throws Exception {
+        static public List<Node> scanForSubItems(ZipFile archive, Node root, NodeList nodes) {
             List<String> childrenKeys = new ArrayList<String>();
             Node childNode = findNamedNode(root.getChildNodes(), "children");
             if (childNode != null) {
@@ -328,6 +328,24 @@ public class TcLogParser {
                 }
             }
 
+            return subItems;
+        }
+
+        static public boolean isTestItem(ZipFile archive, Node node, NodeList nodes) {
+            List<Node> subItems = scanForSubItems(archive, node, nodes);
+
+            for (Node subItem : subItems) {
+                if (!isProjectItem(archive, subItem)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static public List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) throws Exception {
+            List<Node> subItems = scanForSubItems(archive, root, nodes);
+
             if (subItems.isEmpty() && isProjectItem(archive, root)) {
                 return null;
             }
@@ -345,11 +363,13 @@ public class TcLogParser {
                         throw new Exception();
                     } else if (!children.isEmpty()) {
                         result.addAll(children);
-                    } else if (isProjectItem(archive, node)){
+                    }
+
+                    if (isProjectItem(archive, node) && isTestItem(archive, node, nodes)){
                         result.add(new Pair<String, Node>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
                     }
                 } catch (Exception e) {
-                    if (!nodeName.equals("")) {
+                    if (!nodeName.equals("") && result.isEmpty()) {
                         throw e;
                     }
                 }
