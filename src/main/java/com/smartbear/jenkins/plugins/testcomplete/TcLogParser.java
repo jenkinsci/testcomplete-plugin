@@ -354,30 +354,20 @@ public class TcLogParser {
 
             // search sub items
             for (Node node : subItems) {
-                try {
-                    String subNodeName = NodeUtils.getTextProperty(node, "name");
-                    List<Pair<String, Node>> children = findChildNodesRecursively(archive, node, nodes,
-                            "".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName);
+                String subNodeName = NodeUtils.getTextProperty(node, "name");
+                List<Pair<String, Node>> children = findChildNodesRecursively(archive, node, nodes,
+                        "".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName);
 
-                    if (children == null) {
-                        throw new Exception();
-                    } else if (!children.isEmpty()) {
-                        result.addAll(children);
-                    }
+                if (children != null  && !children.isEmpty()) {
+                    result.addAll(children);
+                }
 
-                    if (isProjectItem(archive, node) && isTestItem(archive, node, nodes)){
-                        result.add(new Pair<String, Node>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
-                    }
-                } catch (Exception e) {
-                    if (!nodeName.equals("") && result.isEmpty()) {
-                        throw e;
-                    }
+                if (isProjectItem(archive, node) && isTestItem(archive, node, nodes)){
+                    result.add(new Pair<String, Node>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
                 }
             }
-
             return result;
         }
-
     }
 
     public TcLogInfo parse(BuildListener listener) {
