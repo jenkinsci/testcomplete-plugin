@@ -46,4 +46,9 @@ public class TcLog {
         listener.getLogger().println(stringMessage);
     }
 
+    public static void debug(BuildListener listener, String message, Object ... args) {
+        String stringMessage = "[" + Constants.LOG_PREFIX + "] [DEBUG] " + String.format(message, args);
+        listener.getLogger().println(stringMessage);
+    }
+
 }

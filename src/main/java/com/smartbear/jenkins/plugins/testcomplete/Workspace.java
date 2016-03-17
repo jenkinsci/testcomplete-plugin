@@ -44,6 +44,7 @@ public class Workspace {
     private final FilePath masterLogXFilePath;
     private final FilePath masterHtmlXFilePath;
     private final FilePath slaveErrorFilePath;
+    private final FilePath slaveExitCodeFilePath;
 
     private final FilePath masterLogDirectory;
     private final FilePath slaveMHTFilePath;
@@ -71,6 +72,7 @@ public class Workspace {
         this.masterMHTFilePath = new FilePath(masterLogDirectory, mhtName);
 
         this.slaveErrorFilePath = new FilePath(slaveWorkspacePath, this.logId + Constants.ERROR_FILE_EXTENSION);
+        this.slaveExitCodeFilePath = new FilePath(slaveWorkspacePath, this.logId + "_exitcode" + Constants.ERROR_FILE_EXTENSION);
     }
 
     private FilePath getMasterLogDirectory(AbstractBuild build)
@@ -123,6 +125,10 @@ public class Workspace {
 
     public FilePath getSlaveErrorFilePath() {
         return slaveErrorFilePath;
+    }
+
+    public FilePath getSlaveExitCodeFilePath() {
+        return slaveExitCodeFilePath;
     }
 
     public FilePath getSlaveMHTFilePath() {

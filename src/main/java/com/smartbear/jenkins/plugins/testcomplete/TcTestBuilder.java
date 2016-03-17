@@ -62,6 +62,9 @@ public class TcTestBuilder extends Builder implements Serializable {
     private static final String NO_LOG_ARG = "/DoNotShowLog";
     private static final String FORCE_CONVERSION_TAG = "/ForceConversion";
 
+    private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
+    private boolean DEBUG = false;
+
     private final String suite;
 
     private final String launchType;
@@ -232,12 +235,57 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
     }
 
+    private int fixExitCode(int exitCode, Workspace workspace, BuildListener listener) throws IOException, InterruptedException {
+        BufferedReader br = null;
+        int fixedCode = exitCode;
+
+        try {
+            if (workspace.getSlaveExitCodeFilePath().exists()) {
+                br = new BufferedReader(new InputStreamReader(workspace.getSlaveExitCodeFilePath().read()));
+
+                try {
+                    String exiCodeString = br.readLine().trim();
+                    if (DEBUG) {
+                        TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeRead(), exiCodeString);
+                    }
+                    fixedCode = Integer.parseInt(exiCodeString);
+                } catch (Exception e) {
+                    if (DEBUG) {
+                        TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeReadFailed());
+                    }
+                }
+            } else {
+                if (DEBUG) {
+                    TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeFileNotExists());
+                }
+            }
+        } finally {
+            if (br != null) {
+                br.close();
+            }
+            workspace.getSlaveExitCodeFilePath().delete();
+        }
+
+        return fixedCode;
+    }
+
     public boolean performInternal(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
 
         final PrintStream logger = listener.getLogger();
-        EnvVars env = build.getEnvironment(listener);
         logger.println();
+
+        EnvVars env = build.getEnvironment(listener);
+        DEBUG = false;
+        try {
+            DEBUG = Boolean.parseBoolean(env.expand("${" + DEBUG_FLAG_NAME + "}"));
+        } catch (Exception e) {
+            // Do nothing
+        }
+
+        if (DEBUG) {
+            TcLog.debug(listener, Messages.TcTestBuilder_Debug_Enabled());
+        }
 
         String testDisplayName;
         try {
@@ -334,6 +382,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                 build.getBuiltOn().getDisplayName());
 
         int exitCode = -2;
+        int fixedExitCode = exitCode;
         boolean result = false;
 
         Proc process = null;
@@ -362,15 +411,21 @@ public class TcTestBuilder extends Builder implements Serializable {
             }
             process = null;
 
-            String exitCodeDescription = getExitCodeDescription(exitCode);
+            fixedExitCode = fixExitCode(exitCode, workspace, listener);
+            String exitCodeDescription = getExitCodeDescription(fixedExitCode);
+
             TcLog.info(listener, Messages.TcTestBuilder_ExitCodeMessage(),
-                    exitCodeDescription == null ? exitCode : exitCode + " (" + exitCodeDescription + ")");
+                    exitCodeDescription == null ? fixedExitCode : fixedExitCode + " (" + exitCodeDescription + ")");
+
+            if (DEBUG) {
+                TcLog.debug(listener, Messages.TcTestBuilder_Debug_FixedExitCodeMessage(), exitCode, fixedExitCode);
+            }
 
             processFiles(build, listener, workspace, tcReportAction, startTime);
 
-            if (exitCode == 0) {
+            if (fixedExitCode == 0) {
                 result = true;
-            } else if (exitCode == 1) {
+            } else if (fixedExitCode == 1) {
                 TcLog.warning(listener, Messages.TcTestBuilder_BuildStepHasWarnings());
                 if (actionOnWarnings.equals(BuildStepAction.MAKE_UNSTABLE.name())) {
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsUnstable());
@@ -406,7 +461,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                 }
             }
 
-            tcReportAction.setExitCode(exitCode);
+            tcReportAction.setExitCode(fixedExitCode);
             tcReportAction.setResult(result);
             String tcLogXFileName = tcReportAction.getTcLogXFileName();
             tcReportAction.setStartFailed(tcLogXFileName == null || tcLogXFileName.isEmpty());
