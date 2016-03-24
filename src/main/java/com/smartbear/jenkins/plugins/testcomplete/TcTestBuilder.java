@@ -78,6 +78,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     private final String actionOnWarnings;
     private final String actionOnErrors;
+    private final String commandLineArguments;
 
     private boolean useTimeout;
     private final String timeout;
@@ -99,9 +100,9 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     @DataBoundConstructor
     public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
-                         String actionOnWarnings, String actionOnErrors, boolean useTimeout, String timeout,
-                         boolean useTCService, String userName, String userPassword, boolean useActiveSession,
-                         boolean generateMHT, boolean publishJUnitReports) {
+                         String actionOnWarnings, String actionOnErrors, String commandLineArguments,
+                         boolean useTimeout, String timeout, boolean useTCService, String userName,
+                         String userPassword, boolean useActiveSession, boolean generateMHT, boolean publishJUnitReports) {
         this.suite = suite != null ? suite : "";
 
         if (launchConfig != null) {
@@ -122,6 +123,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         this.executorVersion = executorVersion != null ? executorVersion : Constants.ANY_CONSTANT;
         this.actionOnWarnings = actionOnWarnings != null ? actionOnWarnings : BuildStepAction.NONE.toString();
         this.actionOnErrors = actionOnErrors != null ? actionOnErrors : BuildStepAction.MAKE_UNSTABLE.toString();
+        this.commandLineArguments = commandLineArguments != null ? commandLineArguments : "";
 
         this.useTimeout = useTimeout;
         if (this.useTimeout) {
@@ -188,6 +190,10 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     public String getActionOnErrors() {
         return actionOnErrors;
+    }
+
+    public String getCommandLineArguments() {
+        return commandLineArguments;
     }
 
     public boolean getUseTimeout() {
@@ -787,6 +793,13 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         if (installation.getType() == TcInstallation.ExecutorType.TE) {
             args.add(NO_LOG_ARG);
+        }
+
+        // Custom arguments
+        args.addTokenized(env.expand(getCommandLineArguments()));
+
+        if (DEBUG) {
+            TcLog.debug(listener, Messages.TcTestBuilder_Debug_AdditionalCommandLineArguments(), commandLineArguments);
         }
 
         return args;

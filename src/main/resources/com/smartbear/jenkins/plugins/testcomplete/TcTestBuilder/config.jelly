@@ -63,6 +63,9 @@
         <f:entry title="${%ActionOnErrorsTitle}" field="actionOnErrors">
           <f:select default="MAKE_UNSTABLE"/>
         </f:entry>
+        <f:entry title="${%CommandLineArgumentsTitle}" field="commandLineArguments">
+          <f:textbox />
+        </f:entry>
         <f:optionalBlock title="${%UseTestTimeout}" inline="true" field="useTimeout">
           <f:entry title="${%TimeoutInSeconds}" field="timeout">
             <f:textbox value="${instance.useTimeout ? instance.timeout : ''}" />
