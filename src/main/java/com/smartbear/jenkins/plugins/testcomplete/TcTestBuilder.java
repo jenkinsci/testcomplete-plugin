@@ -501,13 +501,15 @@ public class TcTestBuilder extends Builder implements Serializable {
         File reportFile = new File(workspace.getMasterLogDirectory().getRemote(), tcReportAction.getId() + ".xml");
         try {
             fos = new FileOutputStream(reportFile);
-            pw = new PrintWriter(fos);
-            pw.append(tcReportAction.getLogInfo().getXML());
-            pw.flush();
-            pw.close();
-            pw = null;
-            fos.close();
-            fos = null;
+
+            try {
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                String xml = tcReportAction.getLogInfo().getXML();
+                byteArrayOutputStream.write(xml.getBytes("UTF-8"));
+                byteArrayOutputStream.writeTo(fos);
+            } finally {
+                fos.close();
+            }
 
             synchronized (build) {
                 TestResultAction testResultAction = getTestResultAction(build);
