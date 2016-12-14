@@ -859,6 +859,10 @@ public class TcTestBuilder extends Builder implements Serializable {
             load();
         }
 
+        public String getPluginName() {
+            return Constants.PLUGIN_NAME;
+        }
+
         @Override
         public Builder newInstance(StaplerRequest req, JSONObject formData) throws FormException {
             return super.newInstance(req, formData);

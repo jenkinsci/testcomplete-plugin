@@ -54,46 +54,46 @@
 
     <f:section title="${%ExecutorSettings}">
       <f:advanced>
-        <f:entry title="${%Executor}" field="executorType">
+        <f:entry title="${%Executor}" field="executorType" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/executorType.html">
           <f:select />
         </f:entry>
-        <f:entry title="${%Version}" field="executorVersion">
+        <f:entry title="${%Version}" field="executorVersion" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/executorVersion.html">
           <f:select />
         </f:entry>
-        <f:entry title="${%ActionOnWarningsTitle}" field="actionOnWarnings">
+        <f:entry title="${%ActionOnWarningsTitle}" field="actionOnWarnings" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/actionOnWarnings.html">
           <f:select default="NONE"/>
         </f:entry>
-        <f:entry title="${%ActionOnErrorsTitle}" field="actionOnErrors">
+        <f:entry title="${%ActionOnErrorsTitle}" field="actionOnErrors" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/actionOnErrors.html">
           <f:select default="MAKE_UNSTABLE"/>
         </f:entry>
-        <f:entry title="${%CommandLineArgumentsTitle}" field="commandLineArguments">
+        <f:entry title="${%CommandLineArgumentsTitle}" field="commandLineArguments" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/commandLineArguments.html">
           <f:textbox />
         </f:entry>
-        <f:optionalBlock title="${%UseTestTimeout}" inline="true" field="useTimeout">
+        <f:optionalBlock title="${%UseTestTimeout}" inline="true" field="useTimeout" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/useTimeout.html">
           <f:entry title="${%TimeoutInSeconds}" field="timeout">
             <f:textbox value="${instance.useTimeout ? instance.timeout : ''}" />
           </f:entry>
         </f:optionalBlock>
 
         <f:optionalBlock title="${%UseTCServiceForProcessLaunching}" inline="true" field="useTCService">
-          <f:entry title="${%UserName}" field="userName">
+          <f:entry title="${%UserName}" field="userName" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/userName.html">
             <f:textbox />
           </f:entry>
 
-          <f:entry title="${%UserPassword}" field="userPassword">
+          <f:entry title="${%UserPassword}" field="userPassword" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/userPassword.html">
             <f:password/>
           </f:entry>
 
-          <f:entry title="${%UseActiveSession}" field="useActiveSession">
+          <f:entry title="${%UseActiveSession}" field="useActiveSession" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/useActiveSession.html">
             <f:checkbox default="true"/>
           </f:entry>
         </f:optionalBlock>
 
-        <f:entry title="${%GenerateMHT}" field="generateMHT">
+        <f:entry title="${%GenerateMHT}" field="generateMHT" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/generateMHT.html">
           <f:checkbox default="false"/>
         </f:entry>
 
-        <f:entry title="${%publishJUnitReports}" field="publishJUnitReports">
+        <f:entry title="${%publishJUnitReports}" field="publishJUnitReports" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/publishJUnitReports.html">
           <f:checkbox default="true"/>
         </f:entry>
 
