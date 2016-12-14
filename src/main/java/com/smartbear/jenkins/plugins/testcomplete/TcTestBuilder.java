@@ -60,7 +60,8 @@ public class TcTestBuilder extends Builder implements Serializable {
     private static final String ROUTINE_ARG = "/routine:";
     private static final String TEST_ARG = "/test:";
     private static final String NO_LOG_ARG = "/DoNotShowLog";
-    private static final String FORCE_CONVERSION_TAG = "/ForceConversion";
+    private static final String FORCE_CONVERSION_ARG = "/ForceConversion";
+    private static final String USE_CBT_INTEGRATION_ARG = "/env";
 
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
     private boolean DEBUG = false;
@@ -94,6 +95,12 @@ public class TcTestBuilder extends Builder implements Serializable {
         NONE,
         MAKE_UNSTABLE,
         MAKE_FAILED
+    }
+
+    private class CBTException extends Exception {
+        public CBTException(String message) {
+            super(message);
+        }
     }
 
     private static Utils.BusyNodeList busyNodes = new Utils.BusyNodeList();
@@ -348,7 +355,14 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         // Making the command line
-        ArgumentListBuilder args = makeCommandLineArgs(build, launcher, listener, workspace, chosenInstallation);
+        ArgumentListBuilder args;
+        try {
+            args = makeCommandLineArgs(build, launcher, listener, workspace, chosenInstallation);
+        } catch (CBTException e) {
+            TcLog.error(listener, e.getMessage());
+            build.setResult(Result.FAILURE);
+            return false;
+        }
 
         boolean isJNLPSlave = !build.getBuiltOn().toComputer().isLaunchSupported() &&
                 !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
@@ -358,9 +372,15 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         if (!isJNLPSlave && !useTCService) {
-            TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
+            if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
+                TcLog.error(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
+                TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
+                build.setResult(Result.FAILURE);
+                return false;
+            } else {
+                TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
+            }
         }
-
 
         if (useTCService && !isJNLPSlave) {
             if (!chosenInstallation.isServiceLaunchingAvailable()) {
@@ -748,7 +768,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                                                     Launcher launcher,
                                                     BuildListener listener,
                                                     Workspace workspace,
-                                                    TcInstallation installation) throws IOException, InterruptedException {
+                                                    TcInstallation installation) throws IOException, InterruptedException, CBTException {
 
         ArgumentListBuilder args = new ArgumentListBuilder();
 
@@ -761,7 +781,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         args.add(RUN_ARG);
         args.add(SILENT_MODE_ARG);
-        args.add(FORCE_CONVERSION_TAG);
+        args.add(FORCE_CONVERSION_ARG);
         args.add(NS_ARG);
         args.add(EXIT_ARG);
         args.add(EXPORT_LOG_ARG + workspace.getSlaveLogXFilePath().getRemote());
@@ -791,6 +811,16 @@ public class TcTestBuilder extends Builder implements Serializable {
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
             args.add(PROJECT_ARG + env.expand(getProject()));
             args.add(TEST_ARG + env.expand(getTest()));
+        } else if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
+            if (installation.getType().equals(TcInstallation.ExecutorType.TE)) {
+                throw new CBTException(Messages.TcTestBuilder_CBT_UnableToUseTE());
+            }
+
+            if (installation.compareVersion("12.20", false) < 0) {
+                throw new CBTException(Messages.TcTestBuilder_CBT_NotSupportedTCVersion());
+            }
+
+            args.add(USE_CBT_INTEGRATION_ARG);
         }
 
         if (installation.getType() == TcInstallation.ExecutorType.TE) {

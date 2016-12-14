@@ -36,7 +36,8 @@ public class TcInstallation implements Serializable{
         lcProject,
         lcRoutine,
         lcKdt,
-        lcItem
+        lcItem,
+        lcCBT
     }
 
     public static enum ExecutorType {
