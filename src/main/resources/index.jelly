@@ -1,3 +1,4 @@
+<?jelly escape-by-default='false'?>
 <div>
   Runs automated tests with TestComplete or TestExecute from Jenkins.
 </div>

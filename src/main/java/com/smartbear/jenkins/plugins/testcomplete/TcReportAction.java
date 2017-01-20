@@ -57,7 +57,7 @@ public class TcReportAction implements Action, Serializable {
 
     private TcLogInfo logInfo = null;
 
-    private TcSummaryAction parent = null;
+    private transient TcSummaryAction parent = null;
 
     public TcReportAction(AbstractBuild build, String id, String testName, String agent) {
         this.id = id;

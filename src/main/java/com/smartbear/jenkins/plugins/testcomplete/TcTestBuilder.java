@@ -40,6 +40,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -97,7 +98,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         MAKE_FAILED
     }
 
-    private class CBTException extends Exception {
+    private static class CBTException extends Exception {
         public CBTException(String message) {
             super(message);
         }
@@ -254,7 +255,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         try {
             if (workspace.getSlaveExitCodeFilePath().exists()) {
-                br = new BufferedReader(new InputStreamReader(workspace.getSlaveExitCodeFilePath().read()));
+                br = new BufferedReader(new InputStreamReader(workspace.getSlaveExitCodeFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
 
                 try {
                     String exiCodeString = br.readLine().trim();
@@ -516,7 +517,6 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         FileOutputStream fos = null;
-        PrintWriter pw = null;
 
         File reportFile = new File(workspace.getMasterLogDirectory().getRemote(), tcReportAction.getId() + ".xml");
         try {
@@ -552,14 +552,9 @@ public class TcTestBuilder extends Builder implements Serializable {
                 }
             }
 
-
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            if (pw != null) {
-                pw.close();
-            }
-
             if (fos != null) {
                 try {
                     fos.close();
@@ -617,7 +612,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         BufferedReader br = null;
         try {
             if (workspace.getSlaveErrorFilePath().exists()) {
-                br = new BufferedReader(new InputStreamReader(workspace.getSlaveErrorFilePath().read()));
+                br = new BufferedReader(new InputStreamReader(workspace.getSlaveErrorFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
                 String errorString = br.readLine().trim();
                 TcLog.warning(listener, Messages.TcTestBuilder_ErrorMessage(), errorString);
                 testResult.setError(errorString);

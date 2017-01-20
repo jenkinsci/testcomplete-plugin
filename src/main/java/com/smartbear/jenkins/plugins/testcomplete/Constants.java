@@ -53,4 +53,6 @@ public class Constants {
     public static final int WAITING_AFTER_TIMEOUT_INTERVAL = 300;
     public static final int SERVICE_INTERVAL_DELAY = 180;
 
+    public static final String DEFAULT_CHARSET_NAME = "UTF-8";
+
 }

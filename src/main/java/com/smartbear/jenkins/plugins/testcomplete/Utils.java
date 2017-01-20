@@ -28,6 +28,7 @@ import hudson.model.BuildListener;
 import hudson.model.Node;
 import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
+import org.jenkinsci.remoting.RoleChecker;
 
 import javax.crypto.Cipher;
 import java.lang.ref.WeakReference;
@@ -58,6 +59,12 @@ public class Utils {
     public static boolean isWindows(VirtualChannel channel, BuildListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
+
+                @Override
+                public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+                    // Stub
+                }
+
                 public Boolean call() throws Exception {
                     String os = System.getProperty("os.name");
                     if (os != null) {
@@ -65,6 +72,7 @@ public class Utils {
                     }
                     return (os != null && os.contains("windows"));
                 }
+
             });
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_RemoteCallingFailed(), e);
@@ -75,6 +83,12 @@ public class Utils {
     public static boolean IsLaunchedAsSystemUser(VirtualChannel channel, final BuildListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
+
+                @Override
+                public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+                    // Stub
+                }
+
                 public Boolean call() throws Exception {
 
                     // Trying to check whether we are running on System account
@@ -91,6 +105,7 @@ public class Utils {
 
                     return userProfile.startsWith(winDir);
                 }
+
             });
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_RemoteCallingFailed(), e);
@@ -101,9 +116,16 @@ public class Utils {
     public static long getSystemTime(VirtualChannel channel, BuildListener listener) {
         try {
             return channel.call(new Callable<Long, Exception>() {
+
+                @Override
+                public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+                    // Stub
+                }
+
                 public Long call() throws Exception {
                     return System.currentTimeMillis();
                 }
+
             });
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_RemoteCallingFailed(), e);
@@ -219,9 +241,10 @@ public class Utils {
                 semaphore.release();
             }
 
+            Thread.sleep(200);
+
             // cleanup the unused items
             synchronized (this) {
-                Thread.sleep(200);
                 List<WeakReference<Node>> toRemove = new ArrayList<WeakReference<Node>>();
 
                 for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {

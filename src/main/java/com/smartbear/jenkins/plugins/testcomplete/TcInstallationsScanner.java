@@ -29,6 +29,7 @@ import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
 import hudson.util.jna.JnaException;
 import hudson.util.jna.RegistryKey;
+import org.jenkinsci.remoting.RoleChecker;
 
 import java.io.File;
 import java.io.Serializable;
@@ -119,6 +120,12 @@ public class TcInstallationsScanner implements Serializable {
                 }
             }
         }
+
+        @Override
+        public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+            // Stub
+        }
+
     }
 
     public List<TcInstallation> getInstallations() {

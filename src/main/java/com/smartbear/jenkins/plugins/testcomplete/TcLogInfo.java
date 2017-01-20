@@ -26,6 +26,8 @@ package com.smartbear.jenkins.plugins.testcomplete;
 
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
+
+import java.io.Serializable;
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -33,7 +35,7 @@ import java.util.Date;
  * @author Igor Filin
  */
 @ExportedBean
-public class TcLogInfo {
+public class TcLogInfo implements Serializable {
 
     private final long startTime;
     private final long stopTime;
