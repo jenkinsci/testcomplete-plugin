@@ -89,6 +89,9 @@ public class TcTestBuilder extends Builder implements Serializable {
     private String userName;
     private String userPassword;
     private boolean useActiveSession;
+
+    private String sessionScreenResolution;
+
     private boolean generateMHT;
     private final boolean publishJUnitReports;
 
@@ -110,7 +113,8 @@ public class TcTestBuilder extends Builder implements Serializable {
     public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
                          String actionOnWarnings, String actionOnErrors, String commandLineArguments,
                          boolean useTimeout, String timeout, boolean useTCService, String userName,
-                         String userPassword, boolean useActiveSession, boolean generateMHT, boolean publishJUnitReports) {
+                         String userPassword, boolean useActiveSession, String sessionScreenResolution,
+                         boolean generateMHT, boolean publishJUnitReports) {
         this.suite = suite != null ? suite : "";
 
         if (launchConfig != null) {
@@ -141,6 +145,13 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         this.useTCService = useTCService;
+
+        ScreenResolution resolution = ScreenResolution.parseResolution(sessionScreenResolution);
+        if (resolution == null) {
+            resolution = ScreenResolution.getDefaultResolution();
+        }
+        this.sessionScreenResolution = resolution.toString();
+
         if (this.useTCService) {
             this.userName = userName != null ? userName : "";
             this.userPassword = userPassword != null ? userPassword : "";
@@ -226,6 +237,13 @@ public class TcTestBuilder extends Builder implements Serializable {
 
     public boolean getUseActiveSession() {
         return useActiveSession;
+    }
+
+    public String getSessionScreenResolution() {
+        if (ScreenResolution.parseResolution(sessionScreenResolution) == null)
+            return ScreenResolution.getDefaultResolution().toString();
+
+        return sessionScreenResolution;
     }
 
     public boolean getGenerateMHT() {
@@ -391,7 +409,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                 return false;
             } else {
                 try {
-                    args = prepareServiceCommandLine(chosenInstallation, args, env);
+                    args = prepareServiceCommandLine(listener, chosenInstallation, args, env);
                 }
                 catch (Exception e) {
                     TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
@@ -568,7 +586,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
     }
 
-    private ArgumentListBuilder prepareServiceCommandLine(TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
+    private ArgumentListBuilder prepareServiceCommandLine(BuildListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
         ArgumentListBuilder resultArgs = new ArgumentListBuilder();
 
         resultArgs.addQuoted(chosenInstallation.getServicePath());
@@ -600,6 +618,34 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         resultArgs.add(Constants.SERVICE_ARG_USE_ACTIVE_SESSION).addQuoted(Boolean.toString(getUseActiveSession()));
         resultArgs.add(Constants.SERVICE_ARG_COMMAND_LINE).addQuoted(baseArgs.toStringWithQuote());
+
+        if (DEBUG) {
+            TcLog.debug(listener, Messages.TcTestBuilder_Debug_SessionScreenResolution(), sessionScreenResolution);
+        }
+
+        String sessionScreenResolutionString = sessionScreenResolution;
+        if (sessionScreenResolutionString == null || sessionScreenResolutionString.isEmpty()) {
+            sessionScreenResolutionString = ScreenResolution.getDefaultResolutionString();
+        }
+
+        ScreenResolution resolution = ScreenResolution.parseResolution(sessionScreenResolutionString);
+        if (resolution != null) {
+            if (!resolution.equals(ScreenResolution.getDefaultResolution())) {
+                if (chosenInstallation.isCustomScreenResolutionSupported()) {
+                    if (useActiveSession) {
+                        TcLog.warning(listener, Messages.TcTestBuilder_CustomSessionScreenResolutionCanBeIgnored());
+                    }
+
+                    resultArgs.add(Constants.SERVICE_ARG_SCREEN_WIDTH).addQuoted(Integer.toString(resolution.getWidth()));
+                    resultArgs.add(Constants.SERVICE_ARG_SCREEN_HEIGHT).addQuoted(Integer.toString(resolution.getHeight()));
+
+                } else {
+                    TcLog.warning(listener, Messages.TcTestBuilder_CustomSessionScreenResolutionNotSupported());
+                }
+            }
+        } else {
+            TcLog.warning(listener, Messages.TcTestBuilder_NotSupportedSessionScreenResolution(), sessionScreenResolution);
+        }
 
         return resultArgs;
     }
@@ -918,6 +964,17 @@ public class TcTestBuilder extends Builder implements Serializable {
             model.add(Messages.TcTestBuilder_Descriptor_AnyTagText(), Constants.ANY_CONSTANT);
             model.add(Constants.TE_NAME, TcInstallation.ExecutorType.TE.toString());
             model.add(Constants.TC_NAME, TcInstallation.ExecutorType.TC.toString());
+            return model;
+        }
+
+        public ListBoxModel doFillSessionScreenResolutionItems() {
+            ListBoxModel model = new ListBoxModel();
+
+            for (ScreenResolution resolution : ScreenResolution.getList()) {
+                model.add(resolution.toString());
+            }
+
+            //model.get(ScreenResolution.getList().indexOf(ScreenResolution.getDefaultResolution())).selected = true;
             return model;
         }
 

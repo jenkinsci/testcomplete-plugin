@@ -88,6 +88,14 @@
           <f:entry title="${%UseActiveSession}" field="useActiveSession" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/useActiveSession.html">
             <f:checkbox default="true"/>
           </f:entry>
+
+          <j:invokeStatic var="sessionScreenResolutionDefault" method="getDefaultResolutionString" className="com.smartbear.jenkins.plugins.testcomplete.ScreenResolution">
+          </j:invokeStatic>
+
+          <f:entry title="${%SessionScreenResolution}" field="sessionScreenResolution">
+            <f:select default="${sessionScreenResolutionDefault}"/>
+          </f:entry>
+
         </f:optionalBlock>
 
         <f:entry title="${%GenerateMHT}" field="generateMHT" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/generateMHT.html">

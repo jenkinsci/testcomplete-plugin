@@ -48,6 +48,8 @@ public class Constants {
     public static final String SERVICE_ARG_PASSWORD = "//lPassword:";
     public static final String SERVICE_ARG_TIMEOUT = "//lTimeout:";
     public static final String SERVICE_ARG_USE_ACTIVE_SESSION = "//lUseActiveSession:";
+    public static final String SERVICE_ARG_SCREEN_WIDTH = "//lSessionScreenWidth:";
+    public static final String SERVICE_ARG_SCREEN_HEIGHT = "//lSessionScreenHeight:";
     public static final String SERVICE_ARG_COMMAND_LINE = "//lCommandLine:";
 
     public static final int WAITING_AFTER_TIMEOUT_INTERVAL = 300;

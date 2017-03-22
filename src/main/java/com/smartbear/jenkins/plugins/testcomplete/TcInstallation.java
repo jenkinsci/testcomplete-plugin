@@ -116,6 +116,10 @@ public class TcInstallation implements Serializable{
         return compareVersion("10.60", false) >= 0;
     }
 
+    public boolean isCustomScreenResolutionSupported() {
+        return compareVersion("12.30", false) >= 0;
+    }
+
     @Override
     public String toString() {
         return String.format(Messages.TcInstallation_InstallationString(), getType(), getVersion(), getPath());
