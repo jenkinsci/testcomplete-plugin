@@ -92,7 +92,7 @@
           <j:invokeStatic var="sessionScreenResolutionDefault" method="getDefaultResolutionString" className="com.smartbear.jenkins.plugins.testcomplete.ScreenResolution">
           </j:invokeStatic>
 
-          <f:entry title="${%SessionScreenResolution}" field="sessionScreenResolution">
+          <f:entry title="${%SessionScreenResolution}" field="sessionScreenResolution" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/sessionScreenResolution.html">
             <f:select default="${sessionScreenResolutionDefault}"/>
           </f:entry>
 
