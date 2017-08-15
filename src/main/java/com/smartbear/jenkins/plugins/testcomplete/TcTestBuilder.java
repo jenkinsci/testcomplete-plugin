@@ -813,7 +813,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
         ArgumentListBuilder args = new ArgumentListBuilder();
 
-        FilePath execPath = new FilePath(launcher.getChannel(), installation.getPath());
+        FilePath execPath = new FilePath(launcher.getChannel(), installation.getExecutorPath());
         args.add(execPath.getRemote());
 
         EnvVars env = build.getEnvironment(listener);

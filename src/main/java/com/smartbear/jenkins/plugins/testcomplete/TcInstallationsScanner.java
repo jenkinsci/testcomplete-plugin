@@ -99,9 +99,16 @@ public class TcInstallationsScanner implements Serializable {
                             }
 
                             if (path != null && !path.isEmpty()) {
-                                String executorPath = path + "bin\\" + executor + ".exe";
+                                String rootBinPath = path + "bin";
+                                String executorPath = path + "x64\\bin\\" + executor + ".exe";
+
                                 if (new File(executorPath).exists()) {
-                                    result.add(new TcInstallation(executorPath, type, version));
+                                    result.add(new TcInstallation(rootBinPath, executorPath, type, version));
+                                } else {
+                                    executorPath = path + "bin\\" + executor + ".exe";
+                                    if (new File(executorPath).exists()) {
+                                        result.add(new TcInstallation(rootBinPath, executorPath, type, version));
+                                    }
                                 }
                             }
                         } catch (JnaException e) {

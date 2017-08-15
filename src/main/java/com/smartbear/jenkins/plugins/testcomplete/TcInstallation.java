@@ -47,23 +47,24 @@ public class TcInstallation implements Serializable{
 
     private final static int VERSION_PARTS = 3;
 
-    private final String path;
+    private final String rootBinPath;
+    private final String executorPath;
     private final ExecutorType type;
     private final String version;
 
-    public TcInstallation(String path, ExecutorType type, String version) {
-        this.path = path;
+    public TcInstallation(String rootBinPath, String executorPath, ExecutorType type, String version) {
+        this.rootBinPath = rootBinPath;
+        this.executorPath = executorPath;
         this.type = type;
         this.version = version;
     }
 
-    public String getPath() {
-        return path;
+    public String getExecutorPath() {
+        return executorPath;
     }
 
     public String getServicePath() {
-        String tcBinDirPath = path.substring(0, path.lastIndexOf("\\"));
-        return tcBinDirPath + "\\" + String.format(Constants.TC_SERVICE_EXEC_NAME, getMajorVersion());
+        return rootBinPath + "\\" + String.format(Constants.TC_SERVICE_EXEC_NAME, getMajorVersion());
     }
 
     public ExecutorType getType() {
@@ -122,7 +123,7 @@ public class TcInstallation implements Serializable{
 
     @Override
     public String toString() {
-        return String.format(Messages.TcInstallation_InstallationString(), getType(), getVersion(), getPath());
+        return String.format(Messages.TcInstallation_InstallationString(), getType(), getVersion(), getExecutorPath());
     }
 
 }
