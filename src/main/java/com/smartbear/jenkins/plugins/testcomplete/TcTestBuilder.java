@@ -492,6 +492,9 @@ public class TcTestBuilder extends Builder implements Serializable {
                     build.setResult(Result.FAILURE);
                 }
             }
+        } catch (InterruptedException e) {
+            // The build has been aborted. Let Jenkins mark it as ABORTED
+            throw e;
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(),
                     e.getCause() == null ? e.toString() : e.getCause().toString());
