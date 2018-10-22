@@ -24,7 +24,7 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
 import hudson.util.jna.JnaException;
@@ -41,16 +41,16 @@ import java.util.List;
 /**
  * @author Igor Filin
  */
-public class TcInstallationsScanner implements Serializable {
+class TcInstallationsScanner implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private static final int REGISTRY_KEY_WOW64_32KEY = 0x0200;
     private static final int REGISTRY_KEY_READ = 0x20019;
 
     private final VirtualChannel channel;
-    private final BuildListener listener;
+    private final TaskListener listener;
 
-    public TcInstallationsScanner(VirtualChannel channel, BuildListener listener) {
+    TcInstallationsScanner(VirtualChannel channel, TaskListener listener) {
         this.channel = channel;
         this.listener = listener;
     }
@@ -64,8 +64,8 @@ public class TcInstallationsScanner implements Serializable {
 
         }
 
-        public List<TcInstallation> call() throws Exception {
-            List<TcInstallation> result = new ArrayList<TcInstallation>();
+        public List<TcInstallation> call() {
+            List<TcInstallation> result = new ArrayList<>();
             scanForInstallations(result, "TestComplete", TcInstallation.ExecutorType.TC);
             scanForInstallations(result, "TestExecute", TcInstallation.ExecutorType.TE);
             return result;
@@ -135,7 +135,7 @@ public class TcInstallationsScanner implements Serializable {
 
     }
 
-    public List<TcInstallation> getInstallations() {
+    List<TcInstallation> getInstallations() {
         List<TcInstallation> result = null;
 
         try {
@@ -144,10 +144,10 @@ public class TcInstallationsScanner implements Serializable {
             TcLog.error(listener, Messages.TcTestBuilder_RemoteCallingFailed(), e.getCause().getMessage());
         }
 
-        return result != null ? result : new LinkedList<TcInstallation>();
+        return result != null ? result : new LinkedList<>();
     }
 
-    public TcInstallation findInstallation(List<TcInstallation> installations, String executorType, String executorVersion) {
+    TcInstallation findInstallation(List<TcInstallation> installations, String executorType, String executorVersion) {
         TcInstallation result = null;
 
         for (TcInstallation one : installations) {

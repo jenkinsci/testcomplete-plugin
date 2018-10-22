@@ -41,6 +41,7 @@ public class Constants {
     public static final String MHT_FILE_EXTENSION = ".mht";
     public static final String ERROR_FILE_EXTENSION = ".txt";
     public static final String ANY_CONSTANT = "any";
+    public static final String LEGACY_IDS_FILE_NAME = "legacyIds";
 
     public static final String SERVICE_ARG = "//LogonAndExecute";
     public static final String SERVICE_ARG_DOMAIN = "//lDomain:";

@@ -33,12 +33,16 @@ import hudson.util.FormValidation;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.util.ListBoxModel;
+import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.servlet.ServletException;
+import javax.annotation.Nonnull;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -47,7 +51,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Igor Filin
  */
-public class TcTestBuilder extends Builder implements Serializable {
+@SuppressWarnings("unused")
+public class TcTestBuilder extends Builder implements Serializable, SimpleBuildStep {
 
     private static final String RUN_ARG = "/run";
     private static final String SILENT_MODE_ARG = "/SilentMode";
@@ -63,27 +68,95 @@ public class TcTestBuilder extends Builder implements Serializable {
     private static final String NO_LOG_ARG = "/DoNotShowLog";
     private static final String FORCE_CONVERSION_ARG = "/ForceConversion";
     private static final String USE_CBT_INTEGRATION_ARG = "/env";
+    private static final String VERSION_ARG = "/JenkinsTCPluginVersion:";
 
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
-    private boolean DEBUG = false;
+    private static final String KEEP_LOGS_FLAG_NAME = "TESTCOMPLETE_PLUGIN_KEEP_LOGS";
 
-    private final String suite;
+    public static class LaunchConfig {
 
-    private final String launchType;
-    private final String project;
-    private final String unit;
-    private final String routine;
-    private final String test;
+        private String launchType;
+        private String project;
+        private String unit;
+        private String routine;
+        private String test;
 
-    private final String executorType;
-    private final String executorVersion;
+        @DataBoundConstructor
+        public LaunchConfig() {
+            this.launchType = TcInstallation.LaunchType.lcSuite.toString();
+            this.project = "";
+            this.unit = "";
+            this.routine = "";
+            this.test = "";
+        }
 
-    private final String actionOnWarnings;
-    private final String actionOnErrors;
-    private final String commandLineArguments;
+        @DataBoundSetter
+        public void setValue(String value) {
+            this.launchType = value;
+        }
+
+        public String getValue() {
+            return this.launchType;
+        }
+
+        @DataBoundSetter
+        public void setProject(String project) {
+            this.project = project;
+        }
+
+        public String getProject() {
+            return project;
+        }
+
+        @DataBoundSetter
+        public void setUnit(String unit) {
+            this.unit = unit;
+        }
+
+        public String getUnit() {
+            return unit;
+        }
+
+        @DataBoundSetter
+        public void setRoutine(String routine) {
+            this.routine = routine;
+        }
+
+        public String getRoutine() {
+            return routine;
+        }
+
+        @DataBoundSetter
+        public void setTest(String test) {
+            this.test = test;
+        }
+
+        public String getTest() {
+            return test;
+        }
+
+    }
+
+    private transient boolean DEBUG = false;
+    private transient boolean KEEP_LOGS = false;
+
+    private String suite;
+
+    private String launchType;
+    private String project;
+    private String unit;
+    private String routine;
+    private String test;
+
+    private String executorType;
+    private String executorVersion;
+
+    private String actionOnWarnings;
+    private String actionOnErrors;
+    private String commandLineArguments;
 
     private boolean useTimeout;
-    private final String timeout;
+    private String timeout;
 
     private boolean useTCService;
     private String userName;
@@ -93,16 +166,22 @@ public class TcTestBuilder extends Builder implements Serializable {
     private String sessionScreenResolution;
 
     private boolean generateMHT;
-    private final boolean publishJUnitReports;
+    private boolean publishJUnitReports;
 
-    public static enum BuildStepAction {
+    public enum BuildStepAction {
         NONE,
         MAKE_UNSTABLE,
         MAKE_FAILED
     }
 
     private static class CBTException extends Exception {
-        public CBTException(String message) {
+        CBTException(String message) {
+            super(message);
+        }
+    }
+
+    private static class InvalidConfigurationException extends Exception {
+        InvalidConfigurationException(String message) {
             super(message);
         }
     }
@@ -110,144 +189,220 @@ public class TcTestBuilder extends Builder implements Serializable {
     private static Utils.BusyNodeList busyNodes = new Utils.BusyNodeList();
 
     @DataBoundConstructor
-    public TcTestBuilder(String suite, JSONObject launchConfig, String executorType, String executorVersion,
-                         String actionOnWarnings, String actionOnErrors, String commandLineArguments,
-                         boolean useTimeout, String timeout, boolean useTCService, String userName,
-                         String userPassword, boolean useActiveSession, String sessionScreenResolution,
-                         boolean generateMHT, boolean publishJUnitReports) {
+    public TcTestBuilder(String suite) {
         this.suite = suite != null ? suite : "";
 
-        if (launchConfig != null) {
-            this.launchType = launchConfig.optString("value", TcInstallation.LaunchType.lcSuite.toString());
-            this.project = launchConfig.optString("project", "");
-            this.unit = launchConfig.optString("unit", "");
-            this.routine = launchConfig.optString("routine", "");
-            this.test = launchConfig.optString("test", "");
-        } else {
-            this.launchType = TcInstallation.LaunchType.lcSuite.toString();
-            this.project = "";
-            this.unit = "";
-            this.routine = "";
-            this.test = "";
-        }
+        this.launchType = TcInstallation.LaunchType.lcSuite.toString();
+        this.project = "";
+        this.unit = "";
+        this.routine = "";
+        this.test = "";
 
-        this.executorType = executorType != null ? executorType : Constants.ANY_CONSTANT;
-        this.executorVersion = executorVersion != null ? executorVersion : Constants.ANY_CONSTANT;
-        this.actionOnWarnings = actionOnWarnings != null ? actionOnWarnings : BuildStepAction.NONE.toString();
-        this.actionOnErrors = actionOnErrors != null ? actionOnErrors : BuildStepAction.MAKE_UNSTABLE.toString();
-        this.commandLineArguments = commandLineArguments != null ? commandLineArguments : "";
+        this.executorType = Constants.ANY_CONSTANT;
+        this.executorVersion = Constants.ANY_CONSTANT;
+        this.actionOnWarnings = BuildStepAction.NONE.toString();
+        this.actionOnErrors = BuildStepAction.MAKE_UNSTABLE.toString();
+        this.commandLineArguments = "";
 
-        this.useTimeout = useTimeout;
-        if (this.useTimeout) {
-            this.timeout = timeout != null ? timeout : "";
-        } else {
-            this.timeout = "";
-        }
+        this.useTimeout = false;
+        this.timeout = "";
+        this.useTCService = false;
+        this.sessionScreenResolution = ScreenResolution.getDefaultResolution().toString();
+        this.userName = "";
+        this.userPassword = "";
+        this.useActiveSession = true;
 
-        this.useTCService = useTCService;
-
-        ScreenResolution resolution = ScreenResolution.parseResolution(sessionScreenResolution);
-        if (resolution == null) {
-            resolution = ScreenResolution.getDefaultResolution();
-        }
-        this.sessionScreenResolution = resolution.toString();
-
-        if (this.useTCService) {
-            this.userName = userName != null ? userName : "";
-            this.userPassword = userPassword != null ? userPassword : "";
-            this.useActiveSession = useActiveSession;
-        } else {
-            this.userName = "";
-            this.userPassword = "";
-            this.useActiveSession = false;
-        }
-
-        this.generateMHT = generateMHT;
-        this.publishJUnitReports = publishJUnitReports;
+        this.generateMHT = false;
+        this.publishJUnitReports = true;
     }
 
-    @Override
-    public BuildStepMonitor getRequiredMonitorService() {
-        return BuildStepMonitor.NONE;
+    @DataBoundSetter
+    public void setLaunchConfig(LaunchConfig launchConfig) {
+        this.launchType = launchConfig == null ? TcInstallation.LaunchType.lcSuite.toString() : launchConfig.launchType;
+        this.project = launchConfig == null ? "" : launchConfig.project;
+        this.unit = launchConfig == null ? "" : launchConfig.unit;
+        this.routine = launchConfig == null ? "" : launchConfig.routine;
+        this.test = launchConfig == null ? "" : launchConfig.test;
+    }
+
+    public LaunchConfig getLaunchConfig() {
+        return null;
+    }
+
+    @DataBoundSetter
+    public void setSuite(String suite) {
+        this.suite = suite != null ? suite : "";
     }
 
     public String getSuite() {
         return suite;
     }
 
+    @DataBoundSetter
+    public void setLaunchType(String launchType) {
+        this.launchType = launchType;
+    }
+
     public String getLaunchType() {
         return launchType;
+    }
+
+    @DataBoundSetter
+    public void setProject(String project) {
+        this.project = project;
     }
 
     public String getProject() {
         return project;
     }
 
+    @DataBoundSetter
+    public void setUnit(String unit) {
+        this.unit = unit;
+    }
+
     public String getUnit() {
         return unit;
+    }
+
+    @DataBoundSetter
+    public void setRoutine(String routine) {
+        this.routine = routine;
     }
 
     public String getRoutine() {
         return routine;
     }
 
+    @DataBoundSetter
+    public void setTest(String test) {
+        this.test = test;
+    }
+
     public String getTest() {
         return test;
+    }
+
+    @DataBoundSetter
+    public void setExecutorType(String executorType) {
+        this.executorType = executorType;
     }
 
     public String getExecutorType() {
         return executorType;
     }
 
+    @DataBoundSetter
+    public void setExecutorVersion(String executorVersion) {
+        this.executorVersion = executorVersion;
+    }
+
     public String getExecutorVersion() {
         return executorVersion;
+    }
+
+    @DataBoundSetter
+    public void setActionOnWarnings(String actionOnWarnings) {
+        this.actionOnWarnings = actionOnWarnings;
     }
 
     public String getActionOnWarnings() {
         return actionOnWarnings;
     }
 
+    @DataBoundSetter
+    public void setActionOnErrors(String actionOnErrors) {
+        this.actionOnErrors = actionOnErrors;
+    }
+
     public String getActionOnErrors() {
         return actionOnErrors;
+    }
+
+    @DataBoundSetter
+    public void setCommandLineArguments(String commandLineArguments) {
+        this.commandLineArguments = commandLineArguments;
     }
 
     public String getCommandLineArguments() {
         return commandLineArguments;
     }
 
+    @DataBoundSetter
+    public void setUseTimeout(boolean useTimeout) {
+        this.useTimeout = useTimeout;
+    }
+
     public boolean getUseTimeout() {
         return useTimeout;
+    }
+
+    @DataBoundSetter
+    public void setTimeout(String timeout) {
+        this.timeout = timeout;
     }
 
     public String getTimeout() {
         return timeout;
     }
 
+    @DataBoundSetter
+    public void setUseTCService(boolean useTCService) {
+        this.useTCService = useTCService;
+    }
+
     public boolean getUseTCService() {
         return useTCService;
+    }
+
+    @DataBoundSetter
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public String getUserName() {
         return userName;
     }
 
+    @DataBoundSetter
+    public void setUserPassword(String userPassword) {
+        this.userPassword = userPassword;
+    }
+
     public String getUserPassword() {
         return userPassword;
+    }
+
+    @DataBoundSetter
+    public void setUseActiveSession(boolean useActiveSession) {
+        this.useActiveSession = useActiveSession;
     }
 
     public boolean getUseActiveSession() {
         return useActiveSession;
     }
 
-    public String getSessionScreenResolution() {
-        if (ScreenResolution.parseResolution(sessionScreenResolution) == null)
-            return ScreenResolution.getDefaultResolution().toString();
+    @DataBoundSetter
+    public void setSessionScreenResolution(String sessionScreenResolution) {
+        this.sessionScreenResolution = sessionScreenResolution;
+    }
 
+    public String getSessionScreenResolution() {
         return sessionScreenResolution;
+    }
+
+    @DataBoundSetter
+    public void setGenerateMHT(boolean generateMHT) {
+        this.generateMHT = generateMHT;
     }
 
     public boolean getGenerateMHT() {
         return generateMHT;
+    }
+
+    @DataBoundSetter
+    public void setPublishJUnitReports(boolean publishJUnitReports) {
+        this.publishJUnitReports = publishJUnitReports;
     }
 
     public boolean getPublishJUnitReports() {
@@ -255,19 +410,11 @@ public class TcTestBuilder extends Builder implements Serializable {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener)
-            throws IOException, InterruptedException {
-
-        Node currentNode = build.getBuiltOn();
-        busyNodes.lock(currentNode, listener);
-        try {
-            return performInternal(build, launcher, listener);
-        } finally {
-            busyNodes.release(currentNode);
-        }
+    public BuildStepMonitor getRequiredMonitorService() {
+        return BuildStepMonitor.NONE;
     }
 
-    private int fixExitCode(int exitCode, Workspace workspace, BuildListener listener) throws IOException, InterruptedException {
+    private int fixExitCode(int exitCode, Workspace workspace, TaskListener listener) throws IOException, InterruptedException {
         BufferedReader br = null;
         int fixedCode = exitCode;
 
@@ -301,16 +448,43 @@ public class TcTestBuilder extends Builder implements Serializable {
         return fixedCode;
     }
 
-    public boolean performInternal(AbstractBuild build, Launcher launcher, BuildListener listener)
-            throws IOException, InterruptedException {
+    @Override
+    public void perform(@Nonnull Run<?, ?> run,
+                        @Nonnull FilePath filePath,
+                        @Nonnull Launcher launcher,
+                        @Nonnull TaskListener taskListener) throws InterruptedException, IOException {
+
+        Node currentNode = run.getExecutor().getOwner().getNode();
+        busyNodes.lock(currentNode, taskListener);
+
+        try {
+            performInternal(run, filePath, launcher, taskListener);
+        } catch (InvalidConfigurationException | CBTException e) {
+            TcLog.error(taskListener, e.getMessage());
+            run.setResult(Result.FAILURE);
+        } finally {
+            busyNodes.release(currentNode);
+        }
+    }
+
+    public void performInternal(Run<?, ?> run, FilePath filePath, Launcher launcher, TaskListener listener)
+            throws IOException, InterruptedException, InvalidConfigurationException, CBTException {
 
         final PrintStream logger = listener.getLogger();
         logger.println();
 
-        EnvVars env = build.getEnvironment(listener);
+        EnvVars env = run.getEnvironment(listener);
+
         DEBUG = false;
         try {
             DEBUG = Boolean.parseBoolean(env.expand("${" + DEBUG_FLAG_NAME + "}"));
+        } catch (Exception e) {
+            // Do nothing
+        }
+
+        KEEP_LOGS = false;
+        try {
+            KEEP_LOGS = Boolean.parseBoolean(env.expand("${" + KEEP_LOGS_FLAG_NAME + "}"));
         } catch (Exception e) {
             // Do nothing
         }
@@ -319,14 +493,23 @@ public class TcTestBuilder extends Builder implements Serializable {
             TcLog.debug(listener, Messages.TcTestBuilder_Debug_Enabled());
         }
 
+        checkParameter(launchType, "launchType", TcInstallation.LaunchType.class, null);
+        checkParameter(executorType, "executorType", TcInstallation.ExecutorType.class, Constants.ANY_CONSTANT);
+        checkParameter(actionOnWarnings, "actionOnWarnings",   BuildStepAction.class, null);
+        checkParameter(actionOnErrors, "actionOnErrors",   BuildStepAction.class, null);
+
+        if (sessionScreenResolution != null && (!sessionScreenResolution.isEmpty()) && ScreenResolution.parseResolution(sessionScreenResolution) == null) {
+            throw new InvalidConfigurationException(String.format(Messages.TcTestBuilder_InvalidParameterValue(), sessionScreenResolution, "sessionScreenResolution"));
+        }
+
         String testDisplayName;
         try {
-            testDisplayName = makeDisplayName(build, listener);
+            testDisplayName = makeDisplayName(run, listener);
         } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
             TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-            build.setResult(Result.FAILURE);
-            return false;
+            run.setResult(Result.FAILURE);
+            return;
         }
 
         TcLog.info(listener, Messages.TcTestBuilder_TestStartedMessage(), testDisplayName);
@@ -334,8 +517,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         if (!Utils.isWindows(launcher.getChannel(), listener)) {
             TcLog.error(listener, Messages.TcTestBuilder_NotWindowsOS());
             TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-            build.setResult(Result.FAILURE);
-            return false;
+            run.setResult(Result.FAILURE);
+            return;
         }
 
         // Search required TC/TE installation
@@ -356,8 +539,8 @@ public class TcTestBuilder extends Builder implements Serializable {
         if (chosenInstallation == null) {
             TcLog.error(listener, Messages.TcTestBuilder_InstallationNotFound());
             TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-            build.setResult(Result.FAILURE);
-            return false;
+            run.setResult(Result.FAILURE);
+            return;
         }
 
         TcLog.info(listener, Messages.TcTestBuilder_ChosenInstallation() + "\n\t" + chosenInstallation);
@@ -365,25 +548,18 @@ public class TcTestBuilder extends Builder implements Serializable {
         // Generating  paths
         final Workspace workspace;
         try {
-            workspace = new Workspace(build, launcher, listener);
+            workspace = new Workspace(run, filePath);
         } catch (IOException e) {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
             TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-            build.setResult(Result.FAILURE);
-            return false;
+            run.setResult(Result.FAILURE);
+            return;
         }
 
         // Making the command line
-        ArgumentListBuilder args;
-        try {
-            args = makeCommandLineArgs(build, launcher, listener, workspace, chosenInstallation);
-        } catch (CBTException e) {
-            TcLog.error(listener, e.getMessage());
-            build.setResult(Result.FAILURE);
-            return false;
-        }
+        ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation);
 
-        boolean isJNLPSlave = !build.getBuiltOn().toComputer().isLaunchSupported() &&
+        boolean isJNLPSlave = !run.getExecutor().getOwner().getNode().toComputer().isLaunchSupported() &&
                 !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
 
         if (isJNLPSlave && useTCService) {
@@ -394,8 +570,8 @@ public class TcTestBuilder extends Builder implements Serializable {
             if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
                 TcLog.error(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
                 TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-                build.setResult(Result.FAILURE);
-                return false;
+                run.setResult(Result.FAILURE);
+                return;
             } else {
                 TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
             }
@@ -405,8 +581,8 @@ public class TcTestBuilder extends Builder implements Serializable {
             if (!chosenInstallation.isServiceLaunchingAvailable()) {
                 TcLog.info(listener, Messages.TcTestBuilder_UnableToLaunchByServiceUnsupportedVersion());
                 TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-                build.setResult(Result.FAILURE);
-                return false;
+                run.setResult(Result.FAILURE);
+                return;
             } else {
                 try {
                     args = prepareServiceCommandLine(listener, chosenInstallation, args, env);
@@ -414,17 +590,15 @@ public class TcTestBuilder extends Builder implements Serializable {
                 catch (Exception e) {
                     TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-                    build.setResult(Result.FAILURE);
-                    return false;
+                    run.setResult(Result.FAILURE);
+                    return;
                 }
             }
         }
 
         // TC/TE launching and data processing
-        final TcReportAction tcReportAction = new TcReportAction(build,
-                workspace.getLogId(),
-                testDisplayName,
-                build.getBuiltOn().getDisplayName());
+        final TcReportAction tcReportAction = new TcReportAction(run, workspace.getLogId(), testDisplayName,
+                run.getExecutor().getOwner().getNode().getDisplayName());
 
         int exitCode = -2;
         int fixedExitCode = exitCode;
@@ -445,7 +619,7 @@ public class TcTestBuilder extends Builder implements Serializable {
 
             long startTime = Utils.getSystemTime(launcher.getChannel(), listener);
 
-            Launcher.ProcStarter processStarter = launcher.launch().cmds(args).envs(build.getEnvironment(listener));
+            Launcher.ProcStarter processStarter = launcher.launch().cmds(args).envs(run.getEnvironment(listener));
 
             process = processStarter.start();
 
@@ -466,7 +640,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                 TcLog.debug(listener, Messages.TcTestBuilder_Debug_FixedExitCodeMessage(), exitCode, fixedExitCode);
             }
 
-            processFiles(build, listener, workspace, tcReportAction, startTime);
+            processFiles(run, listener, workspace, tcReportAction, startTime);
 
             if (fixedExitCode == 0) {
                 result = true;
@@ -474,11 +648,11 @@ public class TcTestBuilder extends Builder implements Serializable {
                 TcLog.warning(listener, Messages.TcTestBuilder_BuildStepHasWarnings());
                 if (actionOnWarnings.equals(BuildStepAction.MAKE_UNSTABLE.name())) {
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsUnstable());
-                    build.setResult(Result.UNSTABLE);
+                    run.setResult(Result.UNSTABLE);
                     result = true;
                 } else if (actionOnWarnings.equals(BuildStepAction.MAKE_FAILED.name())) {
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-                    build.setResult(Result.FAILURE);
+                    run.setResult(Result.FAILURE);
                 } else {
                     result = true;
                 }
@@ -486,10 +660,10 @@ public class TcTestBuilder extends Builder implements Serializable {
                 TcLog.warning(listener, Messages.TcTestBuilder_BuildStepHasErrors());
                 if (actionOnErrors.equals(BuildStepAction.MAKE_UNSTABLE.name())) {
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsUnstable());
-                    build.setResult(Result.UNSTABLE);
+                    run.setResult(Result.UNSTABLE);
                 } else if (actionOnErrors.equals(BuildStepAction.MAKE_FAILED.name())) {
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-                    build.setResult(Result.FAILURE);
+                    run.setResult(Result.FAILURE);
                 }
             }
         } catch (InterruptedException e) {
@@ -499,7 +673,7 @@ public class TcTestBuilder extends Builder implements Serializable {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(),
                     e.getCause() == null ? e.toString() : e.getCause().toString());
             TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-            build.setResult(Result.FAILURE);
+            run.setResult(Result.FAILURE);
         } finally {
             if (process != null) {
                 try {
@@ -514,22 +688,21 @@ public class TcTestBuilder extends Builder implements Serializable {
             String tcLogXFileName = tcReportAction.getTcLogXFileName();
             tcReportAction.setStartFailed(tcLogXFileName == null || tcLogXFileName.isEmpty());
 
-            TcSummaryAction currentAction = getOrCreateAction(build);
+            TcSummaryAction currentAction = getOrCreateAction(run);
             currentAction.addReport(tcReportAction);
             if (getPublishJUnitReports()) {
-                publishResult(build, listener, workspace, tcReportAction);
+                publishResult(run, listener, workspace, tcReportAction);
             }
         }
 
         TcLog.info(listener, Messages.TcTestBuilder_TestExecutionFinishedMessage(), testDisplayName);
-        return true;
     }
 
-    private TestResultAction getTestResultAction(AbstractBuild<?, ?> build) {
-        return build.getAction(TestResultAction.class);
+    private TestResultAction getTestResultAction(Run<?, ?> run) {
+        return run.getAction(TestResultAction.class);
     }
 
-    private void publishResult(AbstractBuild build, BuildListener listener,
+    private void publishResult(Run<?, ?> run, TaskListener listener,
                                Workspace workspace, TcReportAction tcReportAction) {
 
         if (tcReportAction.getLogInfo() == null || tcReportAction.getLogInfo().getXML() == null) {
@@ -552,15 +725,15 @@ public class TcTestBuilder extends Builder implements Serializable {
                 fos.close();
             }
 
-            synchronized (build) {
-                TestResultAction testResultAction = getTestResultAction(build);
+            synchronized (run) {
+                TestResultAction testResultAction = getTestResultAction(run);
 
                 boolean testResultActionExists = true;
                 if (testResultAction == null) {
                     testResultActionExists = false;
                     TestResult testResult = new hudson.tasks.junit.TestResult(true);
                     testResult.parse(reportFile);
-                    testResultAction = new TestResultAction(build, testResult, listener);
+                    testResultAction = new TestResultAction(run, testResult, listener);
                 } else {
                     TestResult testResult = testResultAction.getResult();
                     testResult.parse(reportFile);
@@ -569,7 +742,7 @@ public class TcTestBuilder extends Builder implements Serializable {
                 }
 
                 if (!testResultActionExists) {
-                    build.getActions().add(testResultAction);
+                    run.addAction(testResultAction);
                 }
             }
 
@@ -583,13 +756,13 @@ public class TcTestBuilder extends Builder implements Serializable {
                     // Do nothing
                 }
             }
-            if (reportFile.exists()) {
+            if (reportFile.exists() && !KEEP_LOGS) {
                 reportFile.delete();
             }
         }
     }
 
-    private ArgumentListBuilder prepareServiceCommandLine(BuildListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
+    private ArgumentListBuilder prepareServiceCommandLine(TaskListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
         ArgumentListBuilder resultArgs = new ArgumentListBuilder();
 
         resultArgs.addQuoted(chosenInstallation.getServicePath());
@@ -653,7 +826,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         return resultArgs;
     }
 
-    private void processFiles(AbstractBuild build, BuildListener listener, Workspace workspace, TcReportAction testResult, long startTime)
+    private void processFiles(Run<?, ?> run, TaskListener listener, Workspace workspace, TcReportAction testResult, long startTime)
             throws IOException, InterruptedException {
 
         // reading error file
@@ -670,7 +843,10 @@ public class TcTestBuilder extends Builder implements Serializable {
             if (br != null) {
                 br.close();
             }
-            workspace.getSlaveErrorFilePath().delete();
+
+            if (!KEEP_LOGS) {
+                workspace.getSlaveErrorFilePath().delete();
+            }
         }
 
         //copying tclogx file
@@ -680,14 +856,16 @@ public class TcTestBuilder extends Builder implements Serializable {
                 workspace.getSlaveLogXFilePath().copyTo(workspace.getMasterLogXFilePath());
                 String logFileName = workspace.getMasterLogXFilePath().getName();
                 testResult.setTcLogXFileName(logFileName);
-                EnvVars env = build.getEnvironment(listener);
+                EnvVars env = run.getEnvironment(listener);
                 String suiteFileName = new FilePath(new File(env.expand(getSuite()))).getBaseName();
                 boolean errorOnWarnings = BuildStepAction.MAKE_FAILED.name().equals(actionOnWarnings);
                 TcLogParser tcLogParser = new TcLogParser(new File(workspace.getMasterLogXFilePath().getRemote()),
                         suiteFileName, env.expand(getProject()), getPublishJUnitReports(), errorOnWarnings);
                 testResult.setLogInfo(tcLogParser.parse(listener));
             } finally {
-                workspace.getSlaveLogXFilePath().delete();
+                if (!KEEP_LOGS) {
+                    workspace.getSlaveLogXFilePath().delete();
+                }
             }
         }
         else {
@@ -705,7 +883,9 @@ public class TcTestBuilder extends Builder implements Serializable {
                 String logFileName = workspace.getMasterHtmlXFilePath().getName();
                 testResult.setHtmlXFileName(logFileName);
             } finally {
-                workspace.getSlaveHtmlXFilePath().delete();
+                if (!KEEP_LOGS) {
+                    workspace.getSlaveHtmlXFilePath().delete();
+                }
             }
         } else {
             TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
@@ -721,7 +901,9 @@ public class TcTestBuilder extends Builder implements Serializable {
                     String logFileName = workspace.getMasterMHTFilePath().getName();
                     testResult.setMhtFileName(logFileName);
                 } finally {
-                    workspace.getSlaveMHTFilePath().delete();
+                    if (!KEEP_LOGS) {
+                        workspace.getSlaveMHTFilePath().delete();
+                    }
                 }
             } else {
                 TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
@@ -730,9 +912,9 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
     }
 
-    private String makeDisplayName(AbstractBuild build, BuildListener listener) throws IOException, InterruptedException {
+    private String makeDisplayName(Run<?, ?> run, TaskListener listener) throws IOException, InterruptedException {
         StringBuilder builder = new StringBuilder();
-        EnvVars env = build.getEnvironment(listener);
+        EnvVars env = run.getEnvironment(listener);
 
         String launchType = getLaunchType();
 
@@ -790,7 +972,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
     }
 
-    private long getTimeoutValue(BuildListener listener, EnvVars env) {
+    private long getTimeoutValue(TaskListener listener, EnvVars env) {
         if (getUseTimeout()) {
             try {
                 long timeout = Long.parseLong(env.expand(getTimeout()));
@@ -801,25 +983,41 @@ public class TcTestBuilder extends Builder implements Serializable {
                 // Do nothing
             }
             if (listener != null) {
-                TcLog.warning(listener, Messages.TcTestBuilder_InvalidTimeoutValue(),
-                        env.expand(getTimeout()));
+                TcLog.warning(listener, Messages.TcTestBuilder_InvalidTimeoutValue(), env.expand(getTimeout()));
             }
         }
         return -1; // infinite
     }
 
-    private ArgumentListBuilder makeCommandLineArgs(AbstractBuild build,
+    private void checkParameter(String value, String parameterName, Class<?> targetEnum, String additionalValue) throws InvalidConfigurationException {
+        if (value == null) {
+            throw new InvalidConfigurationException(String.format(Messages.TcTestBuilder_InvalidParameterValue(), "", parameterName));
+        }
+
+        for (Object targetValue : targetEnum.getEnumConstants()) {
+            if (value.equals(targetValue.toString())) {
+                return;
+            }
+        }
+
+        if (value.equals(additionalValue)) {
+            return;
+        }
+
+        throw new InvalidConfigurationException(String.format(Messages.TcTestBuilder_InvalidParameterValue(), value, parameterName));
+    }
+
+    private ArgumentListBuilder makeCommandLineArgs(Run<?, ?> run,
                                                     Launcher launcher,
-                                                    BuildListener listener,
+                                                    TaskListener listener,
                                                     Workspace workspace,
                                                     TcInstallation installation) throws IOException, InterruptedException, CBTException {
-
         ArgumentListBuilder args = new ArgumentListBuilder();
 
         FilePath execPath = new FilePath(launcher.getChannel(), installation.getExecutorPath());
         args.add(execPath.getRemote());
 
-        EnvVars env = build.getEnvironment(listener);
+        EnvVars env = run.getEnvironment(listener);
 
         args.add(new FilePath(workspace.getSlaveWorkspacePath(), env.expand(getSuite())));
 
@@ -874,6 +1072,15 @@ public class TcTestBuilder extends Builder implements Serializable {
         // Custom arguments
         args.addTokenized(env.expand(getCommandLineArguments()));
 
+        String version = Utils.getPluginVersionOrNull();
+        if (version != null) {
+            args.add(VERSION_ARG + version);
+        } else {
+            if (DEBUG) {
+                TcLog.debug(listener, Messages.TcTestBuilder_Debug_FailedToDefineSelfVersion());
+            }
+        }
+
         if (DEBUG) {
             TcLog.debug(listener, Messages.TcTestBuilder_Debug_AdditionalCommandLineArguments(), commandLineArguments);
         }
@@ -881,11 +1088,11 @@ public class TcTestBuilder extends Builder implements Serializable {
         return args;
     }
 
-    private TcSummaryAction getOrCreateAction(AbstractBuild build) {
-        TcSummaryAction currentAction = build.getAction(TcSummaryAction.class);
+    private TcSummaryAction getOrCreateAction(Run<?, ?> run) {
+        TcSummaryAction currentAction = run.getAction(TcSummaryAction.class);
         if (currentAction == null) {
-            currentAction = new TcSummaryAction(build);
-            build.addAction(currentAction);
+            currentAction = new TcSummaryAction(run);
+            run.addAction(currentAction);
         }
         return currentAction;
     }
@@ -895,7 +1102,7 @@ public class TcTestBuilder extends Builder implements Serializable {
         return (DescriptorImpl)super.getDescriptor();
     }
 
-    @Extension
+    @Extension @Symbol("testcompletetest")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public DescriptorImpl() {
@@ -908,52 +1115,46 @@ public class TcTestBuilder extends Builder implements Serializable {
         }
 
         @Override
-        public Builder newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public Builder newInstance(StaplerRequest req, @Nonnull JSONObject formData) throws FormException {
             return super.newInstance(req, formData);
         }
 
-        public FormValidation doCheckSuite(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckSuite(@QueryParameter String value) {
             if (value.trim().isEmpty()) {
                 return FormValidation.error(Messages.TcTestBuilder_Descriptor_ValueNotSpecified());
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckProject(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckProject(@QueryParameter String value) {
             if (value.trim().isEmpty()) {
                 return FormValidation.error(Messages.TcTestBuilder_Descriptor_ValueNotSpecified());
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckUnit(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckUnit(@QueryParameter String value) {
             if (value.trim().isEmpty()) {
                 return FormValidation.error(Messages.TcTestBuilder_Descriptor_ValueNotSpecified());
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckRoutine(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckRoutine(@QueryParameter String value) {
             if (value.trim().isEmpty()) {
                 return FormValidation.error(Messages.TcTestBuilder_Descriptor_ValueNotSpecified());
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckTest(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckTest(@QueryParameter String value) {
             if (value.trim().isEmpty()) {
                 return FormValidation.error(Messages.TcTestBuilder_Descriptor_ValueNotSpecified());
             }
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckTimeout(@QueryParameter String value)
-                throws IOException, ServletException {
+        public FormValidation doCheckTimeout(@QueryParameter String value) {
             try {
                 Integer.parseInt(value);
                 return FormValidation.ok();
@@ -977,11 +1178,9 @@ public class TcTestBuilder extends Builder implements Serializable {
                 model.add(resolution.toString());
             }
 
-            //model.get(ScreenResolution.getList().indexOf(ScreenResolution.getDefaultResolution())).selected = true;
             return model;
         }
 
-        //TODO: Need manual version input
         public ListBoxModel doFillExecutorVersionItems() {
             ListBoxModel model = new ListBoxModel();
             model.add(Messages.TcTestBuilder_Descriptor_LatestTagText(), Constants.ANY_CONSTANT);
@@ -1012,9 +1211,11 @@ public class TcTestBuilder extends Builder implements Serializable {
             return true;
         }
 
+        @Nonnull
         public String getDisplayName() {
             return Messages.TcTestBuilder_DisplayName();
         }
+
     }
 
 }

@@ -24,9 +24,9 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.Api;
+import hudson.model.Run;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
@@ -40,7 +40,8 @@ import java.io.Serializable;
 @ExportedBean
 public class TcReportAction implements Action, Serializable {
 
-    private final AbstractBuild build;
+    private final Run<?, ?> build;
+
     private final String id;
 
     private final String testName;
@@ -59,7 +60,7 @@ public class TcReportAction implements Action, Serializable {
 
     private transient TcSummaryAction parent = null;
 
-    public TcReportAction(AbstractBuild build, String id, String testName, String agent) {
+    public TcReportAction(Run<?, ?> build, String id, String testName, String agent) {
         this.id = id;
         this.testName = testName;
         this.agent = agent;
@@ -82,7 +83,7 @@ public class TcReportAction implements Action, Serializable {
         return null;
     }
 
-    public AbstractBuild getBuild() {
+    public Run<?, ?> getBuild() {
         return build;
     }
 
@@ -102,7 +103,7 @@ public class TcReportAction implements Action, Serializable {
 
     @Exported(name="url")
     public String getUrl() {
-        return Jenkins.getInstance().getRootUrl() + build.getUrl() + Constants.PLUGIN_NAME + "/reports/" + id;
+        return Jenkins.get().getRootUrl() + build.getUrl() + Constants.PLUGIN_NAME + "/reports/" + id;
     }
 
     public String getTcLogXFileName() {
@@ -182,15 +183,18 @@ public class TcReportAction implements Action, Serializable {
         this.parent = parent;
     }
 
+    @SuppressWarnings("unused")
     public boolean hasInfo() {
         return (htmlXFileName != null && !htmlXFileName.isEmpty()) ||
                 (error != null && !error.isEmpty());
     }
 
+    @SuppressWarnings("unused")
     public String getNoInfoMessage(String url) {
         return String.format(Messages.TcTestBuilder_NoInfo(), url);
     }
 
+    @SuppressWarnings("unused")
     public boolean hasMHTReport() {
         return (mhtFileName != null && !mhtFileName.isEmpty());
     }

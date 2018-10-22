@@ -31,7 +31,7 @@ import java.io.Serializable;
  */
 public class TcInstallation implements Serializable{
 
-    public static enum LaunchType {
+    public enum LaunchType {
         lcSuite,
         lcProject,
         lcRoutine,
@@ -40,7 +40,7 @@ public class TcInstallation implements Serializable{
         lcCBT
     }
 
-    public static enum ExecutorType {
+    public enum ExecutorType {
         TC,
         TE
     }

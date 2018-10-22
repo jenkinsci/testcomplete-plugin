@@ -41,7 +41,7 @@ public class ScreenResolution {
     private static List<ScreenResolution> list;
 
     static {
-        list = new ArrayList<ScreenResolution>();
+        list = new ArrayList<>();
 
         list.add(new ScreenResolution(800, 600));
         list.add(new ScreenResolution(1024, 600));
@@ -64,6 +64,7 @@ public class ScreenResolution {
         list.add(new ScreenResolution(1920, 1200));
         list.add(new ScreenResolution(2560, 1440));
         list.add(new ScreenResolution(2560, 1600));
+        list.add(new ScreenResolution(3200, 1200));
         list.add(new ScreenResolution(3840, 2160));
         list.add(new ScreenResolution(7680, 4320));
     }
@@ -85,7 +86,7 @@ public class ScreenResolution {
         return Integer.toString(width) + SEPARATOR + Integer.toString(height);
     }
 
-    public static ScreenResolution parseResolution(String resolutionString) {
+    static ScreenResolution parseResolution(String resolutionString) {
         if (resolutionString == null || resolutionString.isEmpty())
             return null;
 
@@ -110,7 +111,7 @@ public class ScreenResolution {
     }
 
     public static List<ScreenResolution> getList() {
-        return new ArrayList<ScreenResolution>(list);
+        return new ArrayList<>(list);
     }
 
     public static ScreenResolution getDefaultResolution() {
@@ -127,13 +128,12 @@ public class ScreenResolution {
             return true;
         }
 
-        if (obj == null || !(obj instanceof ScreenResolution)) {
+        if (!(obj instanceof ScreenResolution)) {
             return false;
         }
 
         ScreenResolution another = (ScreenResolution) obj;
         return height == another.height && width == another.width;
-
     }
 
 }

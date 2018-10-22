@@ -30,12 +30,12 @@ import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import static com.smartbear.jenkins.plugins.testcomplete.Constants.LEGACY_IDS_FILE_NAME;
+import static com.smartbear.jenkins.plugins.testcomplete.Constants.REPORTS_DIRECTORY_NAME;
 
 /**
  * @author Igor Filin
@@ -45,6 +45,7 @@ public class TcDynamicReportAction implements Action{
     private final static String DOWNLOAD_FILE_NAME = "Test";
 
     private final String baseReportsPath;
+    private transient String basePathCache = null;
 
     TcDynamicReportAction(String baseReportsPath) {
 
@@ -63,6 +64,7 @@ public class TcDynamicReportAction implements Action{
         return null;
     }
 
+    @SuppressWarnings("unused")
     public void doDynamic(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
 
         if (!req.getMethod().equals("GET")) {
@@ -72,7 +74,7 @@ public class TcDynamicReportAction implements Action{
 
         String path = req.getRestOfPath();
 
-        if (path.length() == 0 || path.contains("..") || path.length() < 1) {
+        if (path.length() == 0 || path.contains("..")) {
             rsp.sendError(HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
@@ -92,9 +94,17 @@ public class TcDynamicReportAction implements Action{
             ext = Constants.MHT_FILE_EXTENSION;
         }
 
+        String basePath;
+
+        if (basePathCache != null) {
+            basePath = basePathCache;
+        } else {
+            basePath = recalculateBasePath(baseReportsPath);
+            basePathCache = basePath;
+        }
+
         if (ext != null) {
-            String requestedFilePath = baseReportsPath + parts[0];
-            File file = new File(requestedFilePath);
+            File file = new File(basePath, parts[0]);
 
             if (!file.exists() || !file.isFile() || !file.canRead()) {
                 rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -115,7 +125,7 @@ public class TcDynamicReportAction implements Action{
             }
         } else {
             String archiveName = parts[0] + Constants.HTMLX_FILE_EXTENSION;
-            File logFile = new File(baseReportsPath, archiveName);
+            File logFile = new File(basePath, archiveName);
             if (!logFile.exists() || !logFile.isFile()) {
                 rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
@@ -161,6 +171,37 @@ public class TcDynamicReportAction implements Action{
             targetEntry = archive.getEntry(entryName);
         }
         return targetEntry;
+    }
+
+    // https://wiki.jenkins.io/display/JENKINS/JENKINS-24380+Migration
+    private String recalculateBasePath(String basePath) {
+        File path = new File(basePath);
+
+        if (!path.exists()) {
+            path = path.getParentFile();
+
+            String oldDirectoryName = path.getName();
+
+            try {
+                try (BufferedReader br = new BufferedReader(new FileReader(new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        String parts[] = line.split("( )");
+                        if ((parts.length == 2) && (parts[0].equals(oldDirectoryName))) {
+                            File newPath = new File(path.getParentFile(), parts[1] + File.separatorChar + REPORTS_DIRECTORY_NAME);
+                            if (newPath.exists()) {
+                                return newPath.getAbsolutePath();
+                            }
+                            break;
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                // Do nothing
+            }
+        }
+
+        return basePath;
     }
 
 }

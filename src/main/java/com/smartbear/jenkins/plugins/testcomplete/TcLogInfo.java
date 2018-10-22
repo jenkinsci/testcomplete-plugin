@@ -47,7 +47,7 @@ public class TcLogInfo implements Serializable {
 
     private String XML = null;
 
-    public TcLogInfo(long startTime, long stopTime, int testCount, int errorCount, int warningCount) {
+    TcLogInfo(long startTime, long stopTime, int testCount, int errorCount, int warningCount) {
         this.startTime = startTime;
         this.stopTime = stopTime;
         testDuration = stopTime > startTime ? stopTime - startTime : 0;
@@ -84,16 +84,19 @@ public class TcLogInfo implements Serializable {
         return warningCount;
     }
 
+    @SuppressWarnings("unused")
     public String formatStartTime() {
         Date date = new Date(startTime);
         return DateFormat.getDateTimeInstance().format(date);
     }
 
+    @SuppressWarnings("unused")
     public String formatStopTime() {
         Date date = new Date(stopTime);
         return DateFormat.getDateTimeInstance().format(date);
     }
 
+    @SuppressWarnings("unused")
     public String formatTestDuration() {
         long timeInSeconds = testDuration / 1000;
         long s = timeInSeconds % 60;

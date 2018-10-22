@@ -25,9 +25,7 @@
 package com.smartbear.jenkins.plugins.testcomplete;
 
 import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
+import hudson.model.Run;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,12 +48,11 @@ public class Workspace {
     private final FilePath slaveMHTFilePath;
     private final FilePath masterMHTFilePath;
 
-    public Workspace(AbstractBuild build, Launcher launcher, BuildListener listener)
-            throws IOException, InterruptedException {
+    public Workspace(Run<?, ?> run, FilePath filePath) throws IOException, InterruptedException {
 
-        this.slaveWorkspacePath = getSlaveWorkspace(build, launcher, listener);
+        this.slaveWorkspacePath = getSlaveWorkspace(filePath);
 
-        this.logId = Long.toString(System.currentTimeMillis() % 10000000);
+        this.logId = Long.toString(System.currentTimeMillis());
 
         String logXName = this.logId + Constants.LOGX_FILE_EXTENSION;
         String htmlXName = this.logId + Constants.HTMLX_FILE_EXTENSION;
@@ -65,7 +62,7 @@ public class Workspace {
         this.slaveHtmlXFilePath = new FilePath(slaveWorkspacePath, htmlXName);
         this.slaveMHTFilePath = new FilePath(slaveWorkspacePath, mhtName);
 
-        this.masterLogDirectory = getMasterLogDirectory(build);
+        this.masterLogDirectory = getMasterLogDirectory(run);
 
         this.masterLogXFilePath = new FilePath(masterLogDirectory, logXName);
         this.masterHtmlXFilePath = new FilePath(masterLogDirectory, htmlXName);
@@ -75,71 +72,65 @@ public class Workspace {
         this.slaveExitCodeFilePath = new FilePath(slaveWorkspacePath, this.logId + "_exitcode" + Constants.ERROR_FILE_EXTENSION);
     }
 
-    private FilePath getMasterLogDirectory(AbstractBuild build)
-            throws IOException, InterruptedException {
+    private FilePath getMasterLogDirectory(Run<?, ?> run) throws IOException, InterruptedException {
 
-        String buildDir = build.getRootDir().getAbsolutePath();
-        FilePath masterLogDirectory = new FilePath(new File(buildDir +
-                File.separator + Constants.REPORTS_DIRECTORY_NAME));
+        String buildDir = run.getRootDir().getAbsolutePath();
+        FilePath masterLogDirectory = new FilePath(new File(buildDir + File.separator + Constants.REPORTS_DIRECTORY_NAME));
 
         masterLogDirectory.mkdirs();
         return masterLogDirectory;
     }
 
-    private FilePath getSlaveWorkspace(AbstractBuild build, Launcher launcher, BuildListener listener)
-            throws IOException, InterruptedException {
-
-        String workspacePath = build.getEnvironment(listener).get("WORKSPACE");
-        if (workspacePath == null) {
-            throw new IOException(Messages.TcTestBuilder_InternalError());
+    private FilePath getSlaveWorkspace(FilePath filePath) throws IOException, InterruptedException {
+        if (filePath == null) {
+            throw new IOException(Messages.TcTestBuilder_WorkspaceNotSpecified());
         }
 
-        FilePath projectWorkspaceOnSlave = new FilePath(launcher.getChannel(), workspacePath);
-        projectWorkspaceOnSlave.mkdirs();
-        return projectWorkspaceOnSlave.absolutize();
+        filePath.mkdirs();
+        return filePath.absolutize();
     }
 
-    public FilePath getSlaveWorkspacePath() {
+    FilePath getSlaveWorkspacePath() {
         return slaveWorkspacePath;
     }
 
-    public String getLogId() {
+    String getLogId() {
         return logId;
     }
 
-    public FilePath getSlaveLogXFilePath() {
+    FilePath getSlaveLogXFilePath() {
         return slaveLogXFilePath;
     }
 
-    public FilePath getSlaveHtmlXFilePath() {
+    FilePath getSlaveHtmlXFilePath() {
         return slaveHtmlXFilePath;
     }
 
-    public FilePath getMasterLogXFilePath() {
+    FilePath getMasterLogXFilePath() {
         return masterLogXFilePath;
     }
 
-    public FilePath getMasterHtmlXFilePath() {
+    FilePath getMasterHtmlXFilePath() {
         return masterHtmlXFilePath;
     }
 
-    public FilePath getSlaveErrorFilePath() {
+    FilePath getSlaveErrorFilePath() {
         return slaveErrorFilePath;
     }
 
-    public FilePath getSlaveExitCodeFilePath() {
+    FilePath getSlaveExitCodeFilePath() {
         return slaveExitCodeFilePath;
     }
 
-    public FilePath getSlaveMHTFilePath() {
+    FilePath getSlaveMHTFilePath() {
         return slaveMHTFilePath;
     }
 
-    public FilePath getMasterMHTFilePath() {
+    FilePath getMasterMHTFilePath() {
         return masterMHTFilePath;
     }
 
-    public FilePath getMasterLogDirectory() {
+    FilePath getMasterLogDirectory() {
         return masterLogDirectory;
     }
 }

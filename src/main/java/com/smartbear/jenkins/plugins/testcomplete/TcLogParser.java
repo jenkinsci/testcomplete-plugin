@@ -24,7 +24,7 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import org.apache.commons.lang.StringUtils;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -134,10 +134,10 @@ public class TcLogParser {
         }
 
         static public List<String> getMessages(Node node, String status) {
-            List<String> result = new LinkedList<String>();
+            List<String> result = new LinkedList<>();
 
             // using TreeMap for sorting messages order
-            Map<Integer, String> orderedResult = new TreeMap<Integer, String>();
+            Map<Integer, String> orderedResult = new TreeMap<>();
 
             if (node == null) {
                 return result;
@@ -223,11 +223,7 @@ public class TcLogParser {
                         }
                     }
                 }
-            } catch (IOException e) {
-                // Do nothing
-            } catch (ParserConfigurationException e) {
-                // Do nothing
-            } catch (SAXException e) {
+            } catch (IOException | ParserConfigurationException | SAXException e) {
                 // Do nothing
             } finally {
                 if (logDataStream != null) {
@@ -262,9 +258,9 @@ public class TcLogParser {
         }
 
         static public List<Node> findChildNodes(Node root, NodeList nodes) {
-            List<Node> result = new ArrayList<Node>();
+            List<Node> result = new ArrayList<>();
 
-            List<String> childrenKeys = new ArrayList<String>();
+            List<String> childrenKeys = new ArrayList<>();
             Node childNode = findNamedNode(root.getChildNodes(), "children");
             if (childNode != null) {
                 NodeList childNodeProperties = childNode.getChildNodes();
@@ -294,16 +290,11 @@ public class TcLogParser {
             String fileName = getTextProperty(node, "filename");
             Node nodeInfo = getRootDocumentNodeFromArchive(archive, fileName);
             Node logDataRowNode = NodeUtils.findNamedNode(nodeInfo, "status");
-
-            if (logDataRowNode == null) {
-                return true;
-            }
-
-            return false;
+            return logDataRowNode == null;
         }
 
-        static public List<Node> scanForSubItems(ZipFile archive, Node root, NodeList nodes) {
-            List<String> childrenKeys = new ArrayList<String>();
+        static public List<Node> scanForSubItems(Node root, NodeList nodes) {
+            List<String> childrenKeys = new ArrayList<>();
             Node childNode = findNamedNode(root.getChildNodes(), "children");
             if (childNode != null) {
                 NodeList childNodeProperties = childNode.getChildNodes();
@@ -316,7 +307,7 @@ public class TcLogParser {
                 }
             }
 
-            List<Node> subItems = new ArrayList<Node>();
+            List<Node> subItems = new ArrayList<>();
 
             for (String childKey : childrenKeys) {
                 for (int j = 0; j < nodes.getLength(); j++) {
@@ -332,7 +323,7 @@ public class TcLogParser {
         }
 
         static public boolean isTestItem(ZipFile archive, Node node, NodeList nodes) {
-            List<Node> subItems = scanForSubItems(archive, node, nodes);
+            List<Node> subItems = scanForSubItems(node, nodes);
 
             for (Node subItem : subItems) {
                 if (!isProjectItem(archive, subItem)) {
@@ -343,14 +334,13 @@ public class TcLogParser {
             return false;
         }
 
-        static public List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) throws Exception {
-            List<Node> subItems = scanForSubItems(archive, root, nodes);
+        static public List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) {
+            List<Node> subItems = scanForSubItems(root, nodes);
+            List<Pair<String, Node>> result = new ArrayList<>();
 
             if (subItems.isEmpty() && isProjectItem(archive, root)) {
-                return null;
+                return result;
             }
-
-            List<Pair<String, Node>> result = new ArrayList<Pair<String, Node>>();
 
             // search sub items
             for (Node node : subItems) {
@@ -363,14 +353,14 @@ public class TcLogParser {
                 }
 
                 if (isProjectItem(archive, node) && isTestItem(archive, node, nodes)){
-                    result.add(new Pair<String, Node>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
+                    result.add(new Pair<>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
                 }
             }
             return result;
         }
     }
 
-    public TcLogInfo parse(BuildListener listener) {
+    public TcLogInfo parse(TaskListener listener) {
         try {
             ZipFile logArchive = new ZipFile(log);
 
@@ -589,12 +579,12 @@ public class TcLogParser {
             throw new ParsingException("Unable to obtain filename for project node.");
         }
 
-        List<Pair<String, Node>> items = null;
+        List<Pair<String, Node>> items;
 
         try {
             items = NodeUtils.findChildNodesRecursively(logArchive, rootOwnerNode, rootOwnerNode.getParentNode().getChildNodes(), "");
         } catch (Exception e) {
-            items = new ArrayList<Pair<String, Node>>();
+            items = new ArrayList<>();
         }
 
         writer.writeStartElement("testsuite");

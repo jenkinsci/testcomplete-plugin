@@ -24,9 +24,9 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.Api;
+import hudson.model.Run;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
@@ -39,14 +39,14 @@ import java.util.*;
 @ExportedBean
 public class TcSummaryAction implements Action {
 
-    private final AbstractBuild<?, ?> build;
+    private final Run<?, ?> build;
 
-    private LinkedHashMap<String, TcReportAction> reports = new LinkedHashMap<String, TcReportAction>();
+    private LinkedHashMap<String, TcReportAction> reports = new LinkedHashMap<>();
 
-    private ArrayList<TcReportAction> reportsOrder = new ArrayList<TcReportAction>();
+    private ArrayList<TcReportAction> reportsOrder = new ArrayList<>();
     private final TcDynamicReportAction dynamic;
 
-    TcSummaryAction(AbstractBuild<?, ?> build) {
+    TcSummaryAction(Run<?, ?> build) {
         this.build = build;
         String buildDir = build.getRootDir().getAbsolutePath();
         String reportsPath = buildDir + File.separator + Constants.REPORTS_DIRECTORY_NAME + File.separator;
@@ -65,7 +65,7 @@ public class TcSummaryAction implements Action {
         return Constants.PLUGIN_NAME;
     }
 
-    public AbstractBuild<?, ?> getBuild() {
+    public Run<?, ?> getBuild() {
         return build;
     }
 
@@ -86,6 +86,7 @@ public class TcSummaryAction implements Action {
         return reports;
     }
 
+    @SuppressWarnings("unused")
     public TcReportAction getNextReport(TcReportAction report) {
         if (report == null || !reportsOrder.contains(report)) {
             return null;
@@ -97,6 +98,7 @@ public class TcSummaryAction implements Action {
         return reportsOrder.get(index + 1);
     }
 
+    @SuppressWarnings("unused")
     public TcReportAction getPreviousReport(TcReportAction report) {
         if (report == null || !reportsOrder.contains(report)) {
             return null;

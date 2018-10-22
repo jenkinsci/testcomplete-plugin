@@ -24,31 +24,31 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 
 /**
  * @author Igor Filin
  */
 public class TcLog {
 
-    public static void info(BuildListener listener, String message, Object ... args) {
-        String stringMessage = "[" + Constants.LOG_PREFIX + "] " + String.format(message, args);
-        listener.getLogger().println(stringMessage);
+    private static String formatMessage(String marker, String format, Object... args) {
+        return "[" + Constants.LOG_PREFIX + "] " + marker + String.format(format, args);
     }
 
-    public static void warning(BuildListener listener, String message, Object ... args) {
-        String stringMessage = "[" + Constants.LOG_PREFIX + "] [WARNING] " + String.format(message, args);
-        listener.getLogger().println(stringMessage);
+    public static void info(TaskListener listener, String message, Object ... args) {
+        listener.getLogger().println(formatMessage("", message, args));
     }
 
-    public static void error(BuildListener listener, String message, Object ... args) {
-        String stringMessage = "[" + Constants.LOG_PREFIX + "] [ERROR] " + String.format(message, args);
-        listener.getLogger().println(stringMessage);
+    public static void warning(TaskListener listener, String message, Object ... args) {
+        listener.getLogger().println(formatMessage("[WARNING] ", message, args));
     }
 
-    public static void debug(BuildListener listener, String message, Object ... args) {
-        String stringMessage = "[" + Constants.LOG_PREFIX + "] [DEBUG] " + String.format(message, args);
-        listener.getLogger().println(stringMessage);
+    public static void error(TaskListener listener, String message, Object ... args) {
+        listener.getLogger().println(formatMessage("[ERROR] ", message, args));
+    }
+
+    public static void debug(TaskListener listener, String message, Object ... args) {
+        listener.getLogger().println(formatMessage("[DEBUG] ", message, args));
     }
 
 }

@@ -24,10 +24,12 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import hudson.model.BuildListener;
+import hudson.PluginWrapper;
 import hudson.model.Node;
+import hudson.model.TaskListener;
 import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
+import jenkins.model.Jenkins;
 import org.jenkinsci.remoting.RoleChecker;
 
 import javax.crypto.Cipher;
@@ -43,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 
-public class Utils {
+class Utils {
 
     private static final String PUBLIC_KEY =
         "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCD43scUktBOFoR10dS80DbFJf" +
@@ -56,7 +58,7 @@ public class Utils {
     private Utils() {
     }
 
-    public static boolean isWindows(VirtualChannel channel, BuildListener listener) {
+    static boolean isWindows(VirtualChannel channel, TaskListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
 
@@ -65,7 +67,7 @@ public class Utils {
                     // Stub
                 }
 
-                public Boolean call() throws Exception {
+                public Boolean call() {
                     String os = System.getProperty("os.name");
                     if (os != null) {
                         os = os.toLowerCase();
@@ -80,7 +82,7 @@ public class Utils {
         }
     }
 
-    public static boolean IsLaunchedAsSystemUser(VirtualChannel channel, final BuildListener listener) {
+    static boolean IsLaunchedAsSystemUser(VirtualChannel channel, final TaskListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
 
@@ -89,7 +91,7 @@ public class Utils {
                     // Stub
                 }
 
-                public Boolean call() throws Exception {
+                public Boolean call() {
 
                     // Trying to check whether we are running on System account
 
@@ -113,7 +115,7 @@ public class Utils {
         }
     }
 
-    public static long getSystemTime(VirtualChannel channel, BuildListener listener) {
+    static long getSystemTime(VirtualChannel channel, TaskListener listener) {
         try {
             return channel.call(new Callable<Long, Exception>() {
 
@@ -122,7 +124,7 @@ public class Utils {
                     // Stub
                 }
 
-                public Long call() throws Exception {
+                public Long call() {
                     return System.currentTimeMillis();
                 }
 
@@ -133,7 +135,7 @@ public class Utils {
         }
     }
 
-    public static long safeConvertDate(String oleDate) {
+    static long safeConvertDate(String oleDate) {
         double dateToConvert = 0f;
         try {
             dateToConvert = Double.parseDouble(oleDate);
@@ -143,12 +145,12 @@ public class Utils {
         return OLEDateToMillis(dateToConvert);
     }
 
-    public static long OLEDateToMillis(double dSerialDate)
+    private static long OLEDateToMillis(double dSerialDate)
     {
         return (long) ((dSerialDate - 25569) * 24 * 3600 * 1000);
     }
 
-    public static String encryptPassword(String password) throws Exception {
+    static String encryptPassword(String password) throws Exception {
         byte[] keyRawData = new Base64().decode(PUBLIC_KEY);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         KeySpec ks = new X509EncodedKeySpec(keyRawData);
@@ -159,7 +161,7 @@ public class Utils {
     }
 
     private static byte[] encrypt(String data, Key publicKey) throws Exception {
-        ArrayList<byte[]> resultData = new ArrayList<byte[]>();
+        ArrayList<byte[]> resultData = new ArrayList<>();
 
         Cipher rsa = Cipher.getInstance("RSA");
         rsa.init(Cipher.ENCRYPT_MODE, publicKey);
@@ -177,6 +179,7 @@ public class Utils {
         }
 
         int totalLength = 0;
+
         for (int i = 0; i < resultData.size(); i++) {
             totalLength += resultData.get(i).length;
         }
@@ -201,11 +204,28 @@ public class Utils {
         return reversedData;
     }
 
+    public static String getPluginVersionOrNull() {
+        if (Jenkins.getInstanceOrNull() == null) {
+            return null;
+        }
+
+        for (PluginWrapper plugin : Jenkins.getInstanceOrNull().pluginManager.getPlugins()) {
+            String name = plugin.getShortName();
+            if (name != null) {
+                if (name.equals(Constants.PLUGIN_NAME)) {
+                    return plugin.getVersion().split("[ ]")[0];
+                }
+            }
+        }
+
+        return null;
+    }
+
     public static class BusyNodeList {
 
-        private Map<WeakReference<Node>, Semaphore> nodeLocks = new HashMap<WeakReference<Node>, Semaphore>();
+        private Map<WeakReference<Node>, Semaphore> nodeLocks = new HashMap<>();
 
-        public void lock(Node node, BuildListener listener) throws InterruptedException {
+        public void lock(Node node, TaskListener listener) throws InterruptedException {
             Semaphore semaphore = null;
             synchronized (this) {
                 for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
@@ -217,7 +237,7 @@ public class Utils {
 
                 if (semaphore == null) {
                     semaphore = new Semaphore(1, true);
-                    nodeLocks.put(new WeakReference<Node>(node), semaphore);
+                    nodeLocks.put(new WeakReference<>(node), semaphore);
                 } else {
                     listener.getLogger().println();
                     TcLog.info(listener, Messages.TcTestBuilder_WaitingForNodeRelease());
@@ -245,7 +265,7 @@ public class Utils {
 
             // cleanup the unused items
             synchronized (this) {
-                List<WeakReference<Node>> toRemove = new ArrayList<WeakReference<Node>>();
+                List<WeakReference<Node>> toRemove = new ArrayList<>();
 
                 for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
                     Node actualNode = nodeRef.get();
