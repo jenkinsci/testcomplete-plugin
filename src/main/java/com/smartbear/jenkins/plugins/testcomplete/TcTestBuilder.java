@@ -33,7 +33,6 @@ import hudson.util.FormValidation;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
@@ -454,8 +453,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                         @Nonnull Launcher launcher,
                         @Nonnull TaskListener taskListener) throws InterruptedException, IOException {
 
-        Node currentNode = run.getExecutor().getOwner().getNode();
-        busyNodes.lock(currentNode, taskListener);
+        Computer currentComputer = filePath.toComputer();
+        busyNodes.lock(currentComputer, taskListener);
 
         try {
             performInternal(run, filePath, launcher, taskListener);
@@ -463,7 +462,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             TcLog.error(taskListener, e.getMessage());
             run.setResult(Result.FAILURE);
         } finally {
-            busyNodes.release(currentNode);
+            busyNodes.release(currentComputer);
         }
     }
 
@@ -559,7 +558,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         // Making the command line
         ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation);
 
-        boolean isJNLPSlave = !run.getExecutor().getOwner().getNode().toComputer().isLaunchSupported() &&
+        boolean isJNLPSlave = !filePath.toComputer().isLaunchSupported() &&
                 !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
 
         if (isJNLPSlave && useTCService) {
@@ -598,7 +597,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         // TC/TE launching and data processing
         final TcReportAction tcReportAction = new TcReportAction(run, workspace.getLogId(), testDisplayName,
-                run.getExecutor().getOwner().getNode().getDisplayName());
+                filePath.toComputer().getNode().getDisplayName());
 
         int exitCode = -2;
         int fixedExitCode = exitCode;
@@ -703,61 +702,101 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     private void publishResult(Run<?, ?> run, TaskListener listener,
-                               Workspace workspace, TcReportAction tcReportAction) {
+                               Workspace workspace, TcReportAction tcReportAction) throws InterruptedException {
 
         if (tcReportAction.getLogInfo() == null || tcReportAction.getLogInfo().getXML() == null) {
             TcLog.warning(listener, Messages.TcTestBuilder_UnableToPublishTestData());
             return;
         }
 
-        FileOutputStream fos = null;
+        OutputStream os = null;
 
-        File reportFile = new File(workspace.getMasterLogDirectory().getRemote(), tcReportAction.getId() + ".xml");
+        String reportFileName = tcReportAction.getId() + ".xml";
+        FilePath reportFile = new FilePath(workspace.getMasterLogDirectory(), reportFileName);
+
+        if (DEBUG) {
+            TcLog.debug(listener, Messages.TcTestBuilder_Debug_JUNIT_PathOnMaster(), reportFile.getRemote());
+        }
+
         try {
-            fos = new FileOutputStream(reportFile);
+            os = reportFile.write();
 
             try {
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 String xml = tcReportAction.getLogInfo().getXML();
                 byteArrayOutputStream.write(xml.getBytes("UTF-8"));
-                byteArrayOutputStream.writeTo(fos);
+                byteArrayOutputStream.writeTo(os);
             } finally {
-                fos.close();
+                os.close();
+            }
+
+            if (DEBUG) {
+                TcLog.debug(listener, Messages.TcTestBuilder_Debug_JUNIT_GeneratedSuccessfully());
+            }
+
+            if (KEEP_LOGS) {
+                FilePath slaveJUnitFilePath = new FilePath(workspace.getSlaveWorkspacePath(), reportFileName);
+                slaveJUnitFilePath.copyFrom(reportFile);
+
+                if (DEBUG) {
+                    TcLog.debug(listener, Messages.TcTestBuilder_Debug_JUNIT_CopiedToWorkspace(), slaveJUnitFilePath.getRemote());
+                }
             }
 
             synchronized (run) {
                 TestResultAction testResultAction = getTestResultAction(run);
 
-                boolean testResultActionExists = true;
                 if (testResultAction == null) {
-                    testResultActionExists = false;
                     TestResult testResult = new hudson.tasks.junit.TestResult(true);
-                    testResult.parse(reportFile);
+                    testResult.parse(new File(reportFile.getRemote()));
                     testResultAction = new TestResultAction(run, testResult, listener);
+
+                    if (DEBUG) {
+                        TcLog.debug(listener, Messages.TcTestBuilder_Debug_JUNIT_ResultCreated() + ' ' +
+                                String.format(Messages.TcTestBuilder_Debug_JUNIT_ResultInfo(),
+                                        testResultAction.getFailCount(),
+                                        testResultAction.getSkipCount(),
+                                        testResultAction.getTotalCount()));
+                    }
+
+                    run.addAction(testResultAction);
                 } else {
                     TestResult testResult = testResultAction.getResult();
-                    testResult.parse(reportFile);
+                    testResult.parse(new File(reportFile.getRemote()));
                     testResult.tally();
                     testResultAction.setResult(testResult, listener);
-                }
 
-                if (!testResultActionExists) {
-                    run.addAction(testResultAction);
+                    if (DEBUG) {
+                        TcLog.debug(listener, Messages.TcTestBuilder_Debug_JUNIT_ResultAppended() + ' ' +
+                                String.format(Messages.TcTestBuilder_Debug_JUNIT_ResultInfo(),
+                                        testResultAction.getFailCount(),
+                                        testResultAction.getSkipCount(),
+                                        testResultAction.getTotalCount()));
+                    }
                 }
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            if (DEBUG) {
+                TcLog.debug(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.getMessage());
+            }
         } finally {
-            if (fos != null) {
+            if (os != null) {
                 try {
-                    fos.close();
+                    os.close();
                 } catch (IOException e) {
                     // Do nothing
                 }
             }
-            if (reportFile.exists() && !KEEP_LOGS) {
-                reportFile.delete();
+            try {
+                if (reportFile.exists() && !KEEP_LOGS) {
+                    if (DEBUG) {
+                        TcLog.debug(listener, Messages.TcTestBuilder_Debug_JUNIT_ReportDeleted());
+                    }
+                    reportFile.delete();
+                }
+            } catch (IOException e) {
+                // Do nothing
             }
         }
     }
@@ -1184,6 +1223,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         public ListBoxModel doFillExecutorVersionItems() {
             ListBoxModel model = new ListBoxModel();
             model.add(Messages.TcTestBuilder_Descriptor_LatestTagText(), Constants.ANY_CONSTANT);
+            model.add("14", "14.0");
             model.add("12", "12.0");
             model.add("11", "11.0");
             model.add("10", "10.0");

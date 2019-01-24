@@ -25,7 +25,7 @@
 package com.smartbear.jenkins.plugins.testcomplete;
 
 import hudson.PluginWrapper;
-import hudson.model.Node;
+import hudson.model.Computer;
 import hudson.model.TaskListener;
 import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
@@ -223,21 +223,21 @@ class Utils {
 
     public static class BusyNodeList {
 
-        private Map<WeakReference<Node>, Semaphore> nodeLocks = new HashMap<>();
+        private Map<WeakReference<Computer>, Semaphore> computerLocks = new HashMap<>();
 
-        public void lock(Node node, TaskListener listener) throws InterruptedException {
+        public void lock(Computer computer, TaskListener listener) throws InterruptedException {
             Semaphore semaphore = null;
             synchronized (this) {
-                for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
-                    Node actualNode = nodeRef.get();
-                    if (actualNode != null && actualNode == node) {
-                        semaphore = nodeLocks.get(nodeRef);
+                for (WeakReference<Computer> computerRef : computerLocks.keySet()) {
+                    Computer actualComputer = computerRef.get();
+                    if (actualComputer != null && actualComputer == computer) {
+                        semaphore = computerLocks.get(computerRef);
                     }
                 }
 
                 if (semaphore == null) {
                     semaphore = new Semaphore(1, true);
-                    nodeLocks.put(new WeakReference<>(node), semaphore);
+                    computerLocks.put(new WeakReference<>(computer), semaphore);
                 } else {
                     listener.getLogger().println();
                     TcLog.info(listener, Messages.TcTestBuilder_WaitingForNodeRelease());
@@ -247,13 +247,13 @@ class Utils {
             semaphore.acquire();
         }
 
-        public void release(Node node) throws InterruptedException {
+        public void release(Computer computer) throws InterruptedException {
             Semaphore semaphore = null;
             synchronized (this) {
-                for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
-                    Node actualNode = nodeRef.get();
-                    if (actualNode != null && actualNode == node) {
-                        semaphore = nodeLocks.get(nodeRef);
+                for (WeakReference<Computer> computerRef : computerLocks.keySet()) {
+                    Computer actualComputer = computerRef.get();
+                    if (actualComputer != null && actualComputer == computer) {
+                        semaphore = computerLocks.get(computerRef);
                     }
                 }
             }
@@ -265,20 +265,20 @@ class Utils {
 
             // cleanup the unused items
             synchronized (this) {
-                List<WeakReference<Node>> toRemove = new ArrayList<>();
+                List<WeakReference<Computer>> toRemove = new ArrayList<>();
 
-                for (WeakReference<Node> nodeRef : nodeLocks.keySet()) {
-                    Node actualNode = nodeRef.get();
-                    if (actualNode != null && actualNode == node) {
-                        semaphore = nodeLocks.get(nodeRef);
+                for (WeakReference<Computer> computerRef : computerLocks.keySet()) {
+                    Computer actualComputer = computerRef.get();
+                    if (actualComputer != null && actualComputer == computer) {
+                        semaphore = computerLocks.get(computerRef);
                         if (semaphore.availablePermits() > 0) {
-                            toRemove.add(nodeRef);
+                            toRemove.add(computerRef);
                         }
                     }
                 }
 
-                for (WeakReference<Node> nodeRef : toRemove) {
-                    nodeLocks.remove(nodeRef);
+                for (WeakReference<Computer> computerRef : toRemove) {
+                    computerLocks.remove(computerRef);
                 }
             }
         }
