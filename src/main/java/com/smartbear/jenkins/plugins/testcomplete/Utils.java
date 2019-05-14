@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 
-class Utils {
+public class Utils {
 
     private static final String PUBLIC_KEY =
         "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCD43scUktBOFoR10dS80DbFJf" +
@@ -135,7 +135,7 @@ class Utils {
         }
     }
 
-    static long safeConvertDate(String oleDate) {
+    public static long safeConvertDate(String oleDate) {
         double dateToConvert = 0f;
         try {
             dateToConvert = Double.parseDouble(oleDate);

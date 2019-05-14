@@ -23,6 +23,10 @@
  */
 
 package com.smartbear.jenkins.plugins.testcomplete;
+import com.smartbear.jenkins.plugins.testcomplete.parser.ILogParser;
+import com.smartbear.jenkins.plugins.testcomplete.parser.LogParser2;
+import com.smartbear.jenkins.plugins.testcomplete.parser.ParserSettings;
+import com.smartbear.jenkins.plugins.testcomplete.parser.LogParser;
 import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepMonitor;
@@ -639,7 +643,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 TcLog.debug(listener, Messages.TcTestBuilder_Debug_FixedExitCodeMessage(), exitCode, fixedExitCode);
             }
 
-            processFiles(run, listener, workspace, tcReportAction, startTime);
+            processFiles(chosenInstallation, run, listener, workspace, tcReportAction, startTime);
 
             if (fixedExitCode == 0) {
                 result = true;
@@ -865,7 +869,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         return resultArgs;
     }
 
-    private void processFiles(Run<?, ?> run, TaskListener listener, Workspace workspace, TcReportAction testResult, long startTime)
+    private void processFiles(TcInstallation installation, Run<?, ?> run, TaskListener listener, Workspace workspace, TcReportAction testResult, long startTime)
             throws IOException, InterruptedException {
 
         // reading error file
@@ -898,9 +902,18 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 EnvVars env = run.getEnvironment(listener);
                 String suiteFileName = new FilePath(new File(env.expand(getSuite()))).getBaseName();
                 boolean errorOnWarnings = BuildStepAction.MAKE_FAILED.name().equals(actionOnWarnings);
-                TcLogParser tcLogParser = new TcLogParser(new File(workspace.getMasterLogXFilePath().getRemote()),
+
+                ILogParser logParser;
+                ParserSettings parserSettings = new ParserSettings(new File(workspace.getMasterLogXFilePath().getRemote()),
                         suiteFileName, env.expand(getProject()), getPublishJUnitReports(), errorOnWarnings);
-                testResult.setLogInfo(tcLogParser.parse(listener));
+
+                if (installation.hasNewLogVersion()) {
+                    logParser = new LogParser2(parserSettings);
+                } else {
+                    logParser = new LogParser(parserSettings);
+                }
+
+                testResult.setLogInfo(logParser.parse(listener));
             } finally {
                 if (!KEEP_LOGS) {
                     workspace.getSlaveLogXFilePath().delete();

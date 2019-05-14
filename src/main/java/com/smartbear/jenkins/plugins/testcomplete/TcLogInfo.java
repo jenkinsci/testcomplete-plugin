@@ -47,7 +47,7 @@ public class TcLogInfo implements Serializable {
 
     private String XML = null;
 
-    TcLogInfo(long startTime, long stopTime, int testCount, int errorCount, int warningCount) {
+    public TcLogInfo(long startTime, long stopTime, int testCount, int errorCount, int warningCount) {
         this.startTime = startTime;
         this.stopTime = stopTime;
         testDuration = stopTime > startTime ? stopTime - startTime : 0;
