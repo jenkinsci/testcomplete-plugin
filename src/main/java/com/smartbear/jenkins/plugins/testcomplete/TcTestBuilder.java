@@ -72,6 +72,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private static final String FORCE_CONVERSION_ARG = "/ForceConversion";
     private static final String USE_CBT_INTEGRATION_ARG = "/env";
     private static final String VERSION_ARG = "/JenkinsTCPluginVersion:";
+    private static final String TAGS_ARG = "/tags:";
 
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
     private static final String KEEP_LOGS_FLAG_NAME = "TESTCOMPLETE_PLUGIN_KEEP_LOGS";
@@ -83,6 +84,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         private String unit;
         private String routine;
         private String test;
+        private String tags;
 
         @DataBoundConstructor
         public LaunchConfig() {
@@ -91,6 +93,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             this.unit = "";
             this.routine = "";
             this.test = "";
+            this.tags = "";
         }
 
         @DataBoundSetter
@@ -138,6 +141,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return test;
         }
 
+        @DataBoundSetter
+        public void setTags(String tags) {
+            this.tags = tags;
+        }
+
+        public String getTags() {
+            return tags;
+        }
+
     }
 
     private transient boolean DEBUG = false;
@@ -150,6 +162,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private String unit;
     private String routine;
     private String test;
+    private String tags;
 
     private String executorType;
     private String executorVersion;
@@ -183,6 +196,12 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
     }
 
+    private static class TagsException extends Exception {
+        TagsException(String message) {
+            super(message);
+        }
+    }
+
     private static class InvalidConfigurationException extends Exception {
         InvalidConfigurationException(String message) {
             super(message);
@@ -200,6 +219,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         this.unit = "";
         this.routine = "";
         this.test = "";
+        this.tags = "";
 
         this.executorType = Constants.ANY_CONSTANT;
         this.executorVersion = Constants.ANY_CONSTANT;
@@ -226,6 +246,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         this.unit = launchConfig == null ? "" : launchConfig.unit;
         this.routine = launchConfig == null ? "" : launchConfig.routine;
         this.test = launchConfig == null ? "" : launchConfig.test;
+        this.tags = launchConfig == null ? "" : launchConfig.tags;
     }
 
     public LaunchConfig getLaunchConfig() {
@@ -284,6 +305,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     public String getTest() {
         return test;
+    }
+
+    @DataBoundSetter
+    public void setTags(String tags) {
+        this.tags = tags;
+    }
+
+    public String getTags() {
+        return tags;
     }
 
     @DataBoundSetter
@@ -462,7 +492,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         try {
             performInternal(run, filePath, launcher, taskListener);
-        } catch (InvalidConfigurationException | CBTException e) {
+        } catch (InvalidConfigurationException | CBTException | TagsException e) {
             TcLog.error(taskListener, e.getMessage());
             run.setResult(Result.FAILURE);
         } finally {
@@ -471,7 +501,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     public void performInternal(Run<?, ?> run, FilePath filePath, Launcher launcher, TaskListener listener)
-            throws IOException, InterruptedException, InvalidConfigurationException, CBTException {
+            throws IOException, InterruptedException, InvalidConfigurationException, CBTException, TagsException {
 
         final PrintStream logger = listener.getLogger();
         logger.println();
@@ -989,6 +1019,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             builder.append(env.expand(getProject()));
             builder.append("/KeyWordTests|");
             builder.append(env.expand(getTest()));
+        } else if (TcInstallation.LaunchType.lcTags.name().equals(launchType)) {
+            builder.append("/");
+            builder.append(env.expand(getProject()));
+            builder.append("/Tags|");
+            builder.append(env.expand(getTags()));
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
             builder.append("/");
             builder.append(env.expand(getProject()));
@@ -1063,7 +1098,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                                                     Launcher launcher,
                                                     TaskListener listener,
                                                     Workspace workspace,
-                                                    TcInstallation installation) throws IOException, InterruptedException, CBTException {
+                                                    TcInstallation installation) throws IOException, InterruptedException, CBTException, TagsException {
         ArgumentListBuilder args = new ArgumentListBuilder();
 
         FilePath execPath = new FilePath(launcher.getChannel(), installation.getExecutorPath());
@@ -1102,6 +1137,13 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         } else if (TcInstallation.LaunchType.lcKdt.name().equals(launchType)) {
             args.add(PROJECT_ARG + env.expand(getProject()));
             args.add(TEST_ARG + "KeyWordTests|" + env.expand(getTest()));
+        } else if (TcInstallation.LaunchType.lcTags.name().equals(launchType)) {
+            if (installation.compareVersion("14.20", false) < 0) {
+                throw new TagsException(Messages.TcTestBuilder_Tags_NotSupportedTCVersion());
+            }
+
+            args.add(PROJECT_ARG + env.expand(getProject()));
+            args.add(TAGS_ARG + env.expand(getTags()));
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
             args.add(PROJECT_ARG + env.expand(getProject()));
             args.add(TEST_ARG + env.expand(getTest()));

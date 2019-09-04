@@ -20,6 +20,15 @@
       </f:entry>
     </f:radioBlock>
 
+    <f:radioBlock title="${%TypeTags}" name="launchConfig" value="lcTags" checked="${instance.launchType == 'lcTags'}" >
+      <f:entry title="${%Project}" field="project" description="${%ProjectDescriptionForTags}">
+        <f:textbox value="${instance.launchType == 'lcTags' &amp;&amp; instance.project != null ? instance.project : ''}" />
+      </f:entry>
+      <f:entry title="${%TagsName}" field="tags" description="${%TagsDescription}">
+        <f:textbox value="${instance.launchType == 'lcTags' &amp;&amp; instance.tags != null ? instance.tags : ''}" />
+      </f:entry>
+    </f:radioBlock>
+
     <f:radioBlock title="${%TypeRoutine}" name="launchConfig" value="lcRoutine" checked="${instance.launchType == 'lcRoutine'}" >
       <f:entry title="${%Project}" field="project" description="${%ProjectDescription}">
         <f:textbox value="${instance.launchType == 'lcRoutine' &amp;&amp; instance.project != null ? instance.project : ''}" />

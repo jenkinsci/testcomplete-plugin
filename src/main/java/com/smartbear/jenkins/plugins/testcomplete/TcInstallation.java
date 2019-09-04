@@ -34,6 +34,7 @@ public class TcInstallation implements Serializable{
     public enum LaunchType {
         lcSuite,
         lcProject,
+        lcTags,
         lcRoutine,
         lcKdt,
         lcItem,
