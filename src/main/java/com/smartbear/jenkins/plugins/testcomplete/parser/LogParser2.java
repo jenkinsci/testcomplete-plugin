@@ -65,6 +65,10 @@ public class LogParser2 implements ILogParser {
         this.context = context;
     }
 
+    private boolean checkIncomplete(String status) {
+        return "3".equals(status);
+    }
+
     private boolean checkFail(String status) {
         if (context.errorOnWarnings()) {
             return !"0".equals(status);
@@ -222,14 +226,18 @@ public class LogParser2 implements ILogParser {
 
                 writer.writeAttribute("time", testDuration);
 
-                if (checkFail(LogNodeUtils.getTextProperty(testNode, "status"))) {
+                String testCaseStatus = LogNodeUtils.getTextProperty(testNode, "status");
+
+                if (checkIncomplete(testCaseStatus)) {
+                    writer.writeStartElement("skipped");
+                    writer.writeEndElement(); //skipped
+                } else if (checkFail(testCaseStatus)) {
                     writer.writeStartElement("failure");
 
                     List<String> messages = new ArrayList<>();
 
                     List<String> errors = LogNodeUtils.findChildMessages(testNode, "errors", "error");
                     messages.addAll(errors);
-
 
                     if (context.errorOnWarnings()) {
                         List<String> warnings = LogNodeUtils.findChildMessages(testNode, "warnings", "warning");
