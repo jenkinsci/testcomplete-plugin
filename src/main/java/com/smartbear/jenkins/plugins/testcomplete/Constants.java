@@ -32,6 +32,7 @@ public class Constants {
     public static final String TC_NAME = "TestComplete";
     public static final String TE_NAME = "TestExecute";
     public static final String TC_SERVICE_EXEC_NAME = "TestCompleteService%d.exe";
+    public static final String TC_SESSION_CREATOR_EXEC_NAME = "SessionCreator.exe";
 
     public static final String PLUGIN_NAME = "TestComplete";
     public static final String LOG_PREFIX = "TestComplete";
@@ -52,6 +53,10 @@ public class Constants {
     public static final String SERVICE_ARG_SCREEN_WIDTH = "//lSessionScreenWidth:";
     public static final String SERVICE_ARG_SCREEN_HEIGHT = "//lSessionScreenHeight:";
     public static final String SERVICE_ARG_COMMAND_LINE = "//lCommandLine:";
+
+    public static final String SESSION_CREATOR_ARG = "ExecuteProcess";
+    public static final String SESSION_CREATOR_ARG_CMD = "/c:";
+    public static final String SESSION_CREATOR_ARG_VERBOSE = "/v";
 
     public static final int WAITING_AFTER_TIMEOUT_INTERVAL = 300;
     public static final int SERVICE_INTERVAL_DELAY = 180;

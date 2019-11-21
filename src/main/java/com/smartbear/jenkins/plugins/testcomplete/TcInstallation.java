@@ -24,6 +24,7 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
+import java.io.File;
 import java.io.Serializable;
 
 /**
@@ -66,6 +67,10 @@ public class TcInstallation implements Serializable{
 
     public String getServicePath() {
         return rootBinPath + "\\" + String.format(Constants.TC_SERVICE_EXEC_NAME, getMajorVersion());
+    }
+
+    public String getSessionCreatorPath() {
+        return new File(executorPath).getParent() + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME;
     }
 
     public ExecutorType getType() {
@@ -124,6 +129,10 @@ public class TcInstallation implements Serializable{
 
     public boolean hasNewLogVersion() {
         return compareVersion("14.10", false) >= 0;
+    }
+
+    public boolean hasExtendedCommandLine() {
+        return compareVersion("14.30", false) >= 0;
     }
 
     @Override

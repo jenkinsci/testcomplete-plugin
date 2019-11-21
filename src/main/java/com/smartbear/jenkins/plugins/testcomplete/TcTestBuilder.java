@@ -39,6 +39,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.util.ListBoxModel;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -589,15 +590,20 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return;
         }
 
-        // Making the command line
-        ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation);
-
         boolean isJNLPSlave = !filePath.toComputer().isLaunchSupported() &&
                 !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
 
-        if (isJNLPSlave && useTCService) {
+        boolean needToUseService = useTCService;
+
+        if (needToUseService && isJNLPSlave) {
             TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithJNLP());
+            needToUseService = false;
         }
+
+        boolean useSessionCreator = chosenInstallation.hasExtendedCommandLine() && (!needToUseService);
+
+        // Making the command line
+        ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation, useSessionCreator);
 
         if (!isJNLPSlave && !useTCService) {
             if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
@@ -627,6 +633,16 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                     return;
                 }
             }
+        } else if (useSessionCreator) {
+            try {
+                args = prepareSessionCreatorCommandLine(listener, chosenInstallation, args, env);
+            }
+            catch (Exception e) {
+                TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
+                TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
+                run.setResult(Result.FAILURE);
+                return;
+            }
         }
 
         // TC/TE launching and data processing
@@ -641,7 +657,6 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         try {
             TcLog.info(listener, Messages.TcTestBuilder_LaunchingTestRunner());
 
-
             long realTimeout = getTimeoutValue(null, env);
             if (realTimeout != -1) {
                 realTimeout += Constants.WAITING_AFTER_TIMEOUT_INTERVAL;
@@ -653,14 +668,24 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             long startTime = Utils.getSystemTime(launcher.getChannel(), listener);
 
             Launcher.ProcStarter processStarter = launcher.launch().cmds(args).envs(run.getEnvironment(listener));
+            processStarter.readStdout();
 
             process = processStarter.start();
+            InputStream processStdout = process.getStdout();
 
             if (realTimeout == -1) {
                 exitCode = process.join();
             } else {
                 exitCode = process.joinWithTimeout(realTimeout, TimeUnit.SECONDS, listener);
             }
+
+            if (DEBUG && (processStdout != null)) {
+                String processOutput = IOUtils.toString(processStdout);
+                if ((processOutput != null) && (!processOutput.isEmpty())) {
+                    TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExecutorOutput() + "\n" + processOutput);
+                }
+            }
+
             process = null;
 
             fixedExitCode = fixExitCode(exitCode, workspace, listener);
@@ -899,6 +924,21 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         return resultArgs;
     }
 
+    private ArgumentListBuilder prepareSessionCreatorCommandLine(TaskListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception {
+        ArgumentListBuilder resultArgs = new ArgumentListBuilder();
+
+        resultArgs.addQuoted(chosenInstallation.getSessionCreatorPath());
+        resultArgs.add(Constants.SESSION_CREATOR_ARG);
+
+        if (DEBUG) {
+            resultArgs.add(Constants.SESSION_CREATOR_ARG_VERBOSE);
+        }
+
+        resultArgs.add(Constants.SESSION_CREATOR_ARG_CMD + baseArgs.toStringWithQuote());
+
+        return resultArgs;
+    }
+
     private void processFiles(TcInstallation installation, Run<?, ?> run, TaskListener listener, Workspace workspace, TcReportAction testResult, long startTime)
             throws IOException, InterruptedException {
 
@@ -1094,31 +1134,41 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         throw new InvalidConfigurationException(String.format(Messages.TcTestBuilder_InvalidParameterValue(), value, parameterName));
     }
 
+    private void addArg(ArgumentListBuilder args, String value, boolean newFormat) {
+        if (newFormat) {
+            args.addQuoted(value);
+        } else {
+            args.add(value);
+        }
+    }
+
     private ArgumentListBuilder makeCommandLineArgs(Run<?, ?> run,
                                                     Launcher launcher,
                                                     TaskListener listener,
                                                     Workspace workspace,
-                                                    TcInstallation installation) throws IOException, InterruptedException, CBTException, TagsException {
+                                                    TcInstallation installation,
+                                                    boolean useNewCommandLineFormat) throws IOException, InterruptedException, CBTException, TagsException {
         ArgumentListBuilder args = new ArgumentListBuilder();
 
         FilePath execPath = new FilePath(launcher.getChannel(), installation.getExecutorPath());
-        args.add(execPath.getRemote());
+        addArg(args, execPath.getRemote(), useNewCommandLineFormat);
 
         EnvVars env = run.getEnvironment(listener);
 
-        args.add(new FilePath(workspace.getSlaveWorkspacePath(), env.expand(getSuite())));
+        addArg(args, new FilePath(workspace.getSlaveWorkspacePath(), env.expand(getSuite())).getRemote(), useNewCommandLineFormat);
 
         args.add(RUN_ARG);
         args.add(SILENT_MODE_ARG);
         args.add(FORCE_CONVERSION_ARG);
         args.add(NS_ARG);
         args.add(EXIT_ARG);
-        args.add(EXPORT_LOG_ARG + workspace.getSlaveLogXFilePath().getRemote());
-        args.add(EXPORT_LOG_ARG + workspace.getSlaveHtmlXFilePath().getRemote());
-        args.add(ERROR_LOG_ARG + workspace.getSlaveErrorFilePath().getRemote());
+
+        addArg(args, EXPORT_LOG_ARG + workspace.getSlaveLogXFilePath().getRemote(), useNewCommandLineFormat);
+        addArg(args, EXPORT_LOG_ARG + workspace.getSlaveHtmlXFilePath().getRemote(), useNewCommandLineFormat);
+        addArg(args, ERROR_LOG_ARG + workspace.getSlaveErrorFilePath(), useNewCommandLineFormat);
 
         if (getGenerateMHT()) {
-            args.add(EXPORT_LOG_ARG + workspace.getSlaveMHTFilePath().getRemote());
+            addArg(args, EXPORT_LOG_ARG + workspace.getSlaveMHTFilePath().getRemote(), useNewCommandLineFormat);
         }
 
         if (getUseTimeout()) {
@@ -1129,24 +1179,24 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         if (TcInstallation.LaunchType.lcProject.name().equals(launchType)) {
-            args.add(PROJECT_ARG + env.expand(getProject()));
+            addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
         } else if (TcInstallation.LaunchType.lcRoutine.name().equals(launchType)) {
-            args.add(PROJECT_ARG + env.expand(getProject()));
-            args.add(UNIT_ARG + env.expand(getUnit()));
-            args.add(ROUTINE_ARG + env.expand(getRoutine()));
+            addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
+            addArg(args, UNIT_ARG + env.expand(getUnit()), useNewCommandLineFormat);
+            addArg(args, ROUTINE_ARG + env.expand(getRoutine()), useNewCommandLineFormat);
         } else if (TcInstallation.LaunchType.lcKdt.name().equals(launchType)) {
-            args.add(PROJECT_ARG + env.expand(getProject()));
-            args.add(TEST_ARG + "KeyWordTests|" + env.expand(getTest()));
+            addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
+            addArg(args, TEST_ARG + "KeyWordTests|" + env.expand(getTest()), useNewCommandLineFormat);
         } else if (TcInstallation.LaunchType.lcTags.name().equals(launchType)) {
             if (installation.compareVersion("14.20", false) < 0) {
                 throw new TagsException(Messages.TcTestBuilder_Tags_NotSupportedTCVersion());
             }
 
-            args.add(PROJECT_ARG + env.expand(getProject()));
-            args.add(TAGS_ARG + env.expand(getTags()));
+            addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
+            addArg(args, TAGS_ARG + env.expand(getTags()), useNewCommandLineFormat);
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
-            args.add(PROJECT_ARG + env.expand(getProject()));
-            args.add(TEST_ARG + env.expand(getTest()));
+            addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
+            addArg(args, TEST_ARG + env.expand(getTest()), useNewCommandLineFormat);
         } else if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
             if (installation.getType().equals(TcInstallation.ExecutorType.TE)) {
                 throw new CBTException(Messages.TcTestBuilder_CBT_UnableToUseTE());
@@ -1164,7 +1214,19 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         // Custom arguments
-        args.addTokenized(env.expand(getCommandLineArguments()));
+        if (useNewCommandLineFormat) {
+
+            String[] tokenizedArgs = Util.tokenize(env.expand(getCommandLineArguments()));
+
+            for (String arg : tokenizedArgs) {
+                String escapedCommandLineArgument = arg.replace("\"", "\\\\\\\"");
+                if (!escapedCommandLineArgument.isEmpty()) {
+                    args.add("\"" + escapedCommandLineArgument + "\"");
+                }
+            }
+        } else {
+            args.addTokenized(env.expand(getCommandLineArguments()));
+        }
 
         String version = Utils.getPluginVersionOrNull();
         if (version != null) {
