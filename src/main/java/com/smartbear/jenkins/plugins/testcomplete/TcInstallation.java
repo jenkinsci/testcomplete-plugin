@@ -24,6 +24,8 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
+import hudson.FilePath;
+
 import java.io.File;
 import java.io.Serializable;
 
@@ -70,7 +72,7 @@ public class TcInstallation implements Serializable{
     }
 
     public String getSessionCreatorPath() {
-        return new File(executorPath).getParent() + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME;
+        return new FilePath(new File(executorPath)).getParent().getRemote() + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME;
     }
 
     public ExecutorType getType() {
