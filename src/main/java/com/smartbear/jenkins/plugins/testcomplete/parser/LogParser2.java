@@ -60,9 +60,11 @@ public class LogParser2 implements ILogParser {
 
 
     private final ParserSettings context;
+    private final int timezoneOffset;
 
-    public LogParser2(ParserSettings context) {
+    public LogParser2(ParserSettings context, int timezoneOffset) {
         this.context = context;
+        this.timezoneOffset = timezoneOffset;
     }
 
     private boolean checkIncomplete(String status) {
@@ -87,7 +89,14 @@ public class LogParser2 implements ILogParser {
         }
 
         long startTime = Utils.safeConvertDate(LogNodeUtils.getTextProperty(descriptionTopLevelNode, START_TIME_PROPERTY_NAME));
+        if (startTime > 0) {
+            startTime -= timezoneOffset;
+        }
+
         long stopTime = Utils.safeConvertDate(LogNodeUtils.getTextProperty(descriptionTopLevelNode, STOP_TIME_PROPERTY_NAME));
+        if (stopTime > 0) {
+            stopTime -= timezoneOffset;
+        }
 
         int testCount;
         try {

@@ -29,6 +29,7 @@ import com.smartbear.jenkins.plugins.testcomplete.parser.ParserSettings;
 import com.smartbear.jenkins.plugins.testcomplete.parser.LogParser;
 import hudson.*;
 import hudson.model.*;
+import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.junit.TestResult;
 import hudson.tasks.junit.TestResultAction;
@@ -698,7 +699,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 TcLog.debug(listener, Messages.TcTestBuilder_Debug_FixedExitCodeMessage(), exitCode, fixedExitCode);
             }
 
-            processFiles(chosenInstallation, run, listener, workspace, tcReportAction, startTime);
+            processFiles(chosenInstallation, run, launcher.getChannel(), listener, workspace, tcReportAction, startTime);
 
             if (fixedExitCode == 0) {
                 result = true;
@@ -939,7 +940,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         return resultArgs;
     }
 
-    private void processFiles(TcInstallation installation, Run<?, ?> run, TaskListener listener, Workspace workspace, TcReportAction testResult, long startTime)
+    private void processFiles(TcInstallation installation, Run<?, ?> run, VirtualChannel channel, TaskListener listener, Workspace workspace, TcReportAction testResult, long startTime)
             throws IOException, InterruptedException {
 
         // reading error file
@@ -977,10 +978,12 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 ParserSettings parserSettings = new ParserSettings(new File(workspace.getMasterLogXFilePath().getRemote()),
                         suiteFileName, env.expand(getProject()), getPublishJUnitReports(), errorOnWarnings);
 
+                int timezoneOffset = Utils.getTimezoneOffset(channel, listener);
+
                 if (installation.hasNewLogVersion()) {
-                    logParser = new LogParser2(parserSettings);
+                    logParser = new LogParser2(parserSettings, timezoneOffset);
                 } else {
-                    logParser = new LogParser(parserSettings);
+                    logParser = new LogParser(parserSettings, timezoneOffset);
                 }
 
                 testResult.setLogInfo(logParser.parse(listener));

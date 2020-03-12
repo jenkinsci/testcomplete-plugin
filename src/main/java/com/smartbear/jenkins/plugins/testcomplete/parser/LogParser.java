@@ -52,9 +52,11 @@ public class LogParser implements ILogParser {
     private static final String WARNING_COUNT_PROPERTY_NAME = "warning count";
 
     private final ParserSettings context;
+    private final int timezoneOffset;
 
-    public LogParser(ParserSettings context) {
+    public LogParser(ParserSettings context, int timezoneOffset) {
         this.context = context;
+        this.timezoneOffset = timezoneOffset;
     }
 
     @Override
@@ -68,7 +70,14 @@ public class LogParser implements ILogParser {
             }
 
             long startTime = Utils.safeConvertDate(LogNodeUtils.getTextProperty(descriptionTopLevelNode, START_TIME_PROPERTY_NAME));
+            if (startTime > 0) {
+                startTime -= timezoneOffset;
+            }
+
             long stopTime = Utils.safeConvertDate(LogNodeUtils.getTextProperty(descriptionTopLevelNode, STOP_TIME_PROPERTY_NAME));
+            if (stopTime > 0) {
+                stopTime -= timezoneOffset;
+            }
 
             int testCount = 0;
             try {

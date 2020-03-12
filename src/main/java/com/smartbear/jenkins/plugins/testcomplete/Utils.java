@@ -39,10 +39,7 @@ import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 
 public class Utils {
@@ -126,6 +123,28 @@ public class Utils {
 
                 public Long call() {
                     return System.currentTimeMillis();
+                }
+
+            });
+        } catch (Exception e) {
+            TcLog.error(listener, Messages.TcTestBuilder_RemoteCallingFailed(), e);
+            return 0;
+        }
+    }
+
+    static int getTimezoneOffset(VirtualChannel channel, TaskListener listener) {
+        try {
+            return channel.call(new Callable<Integer, Exception>() {
+
+                @Override
+                public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+                    // Stub
+                }
+
+                public Integer call() {
+                    Calendar now = Calendar.getInstance();
+                    TimeZone timeZone = now.getTimeZone();
+                    return timeZone.getRawOffset();
                 }
 
             });
