@@ -81,6 +81,10 @@ If you have any questions or need assistance with setting up the plugin and conf
 
 ## *Version History*
 
+#### Version 2.4.1
+-   A couple of minor bugs have been fixed on linux.
+-   *Fixed*: Incorrect start time displayed on "TestComplete Test Results" page.
+
 #### Version 2.4
 -   *Fixed*: Jenkins JUnit results displayed an invalid number of skipped tests.
 
