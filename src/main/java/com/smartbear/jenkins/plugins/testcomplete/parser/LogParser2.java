@@ -50,7 +50,6 @@ public class LogParser2 implements ILogParser {
     private static final String SUMMARY_ENTRY_NAME = "Summary.dat";
     private static final String DESCRIPTION_ENTRY_NAME = "Description.tcLog";
 
-    private static final String TEST_COUNT_PROPERTY_NAME = "test count";
     private static final String START_TIME_PROPERTY_NAME = "start time";
     private static final String STOP_TIME_PROPERTY_NAME = "stop time";
     private static final String ERROR_COUNT_PROPERTY_NAME = "error count";
@@ -98,13 +97,6 @@ public class LogParser2 implements ILogParser {
             stopTime -= timezoneOffset;
         }
 
-        int testCount;
-        try {
-            testCount = Integer.parseInt(LogNodeUtils.getTextProperty(descriptionTopLevelNode, TEST_COUNT_PROPERTY_NAME));
-        } catch (NumberFormatException e) {
-            throw new ParsingException(UNEXPECTED_LOG_FORMAT);
-        }
-
         int warningCount;
         try {
             warningCount = Integer.parseInt(LogNodeUtils.getTextProperty(descriptionTopLevelNode, WARNING_COUNT_PROPERTY_NAME));
@@ -119,7 +111,7 @@ public class LogParser2 implements ILogParser {
             throw new ParsingException(UNEXPECTED_LOG_FORMAT);
         }
 
-        return new TcLogInfo(startTime, stopTime, testCount, errorCount, warningCount);
+        return new TcLogInfo(startTime, stopTime, 0, errorCount, warningCount);
     }
 
     private void convertSingleEntryToXML(ZipFile logArchive, TcLogInfo logInfo, XMLStreamWriter writer) throws ParsingException, XMLStreamException {
