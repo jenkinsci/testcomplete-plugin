@@ -38,6 +38,7 @@ import hudson.util.FormValidation;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
@@ -178,7 +179,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     private boolean useTCService;
     private String userName;
-    private String userPassword;
+    private Secret userPassword;
     private boolean useActiveSession;
 
     private String sessionScreenResolution;
@@ -234,7 +235,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         this.useTCService = false;
         this.sessionScreenResolution = ScreenResolution.getDefaultResolution().toString();
         this.userName = "";
-        this.userPassword = "";
+        this.userPassword = Secret.fromString("");
         this.useActiveSession = true;
 
         this.generateMHT = false;
@@ -401,11 +402,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     @DataBoundSetter
     public void setUserPassword(String userPassword) {
-        this.userPassword = userPassword;
+        this.userPassword = Secret.fromString(userPassword);
     }
 
     public String getUserPassword() {
-        return userPassword;
+        return Secret.toString(this.userPassword);
+    }
+
+    public Secret getUserPasswordSecret() {
+        return this.userPassword;
     }
 
     @DataBoundSetter
