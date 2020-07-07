@@ -81,6 +81,12 @@ If you have any questions or need assistance with setting up the plugin and conf
 
 ## *Version History*
 
+#### Version 2.5.1
+-   *Fixed*: A potential security vulnerability. The password of user accounts used to open interactive user sessions on Jenkins nodes was stored as plain text.
+
+#### Version 2.5
+-   *Fixed*: Test log compatibility issue.
+
 #### Version 2.4.1
 -   A couple of minor bugs have been fixed on linux.
 -   *Fixed*: Incorrect start time displayed on "TestComplete Test Results" page.
