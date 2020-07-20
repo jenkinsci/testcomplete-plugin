@@ -26,6 +26,9 @@ package com.smartbear.jenkins.plugins.testcomplete;
 
 import hudson.model.TaskListener;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 /**
  * @author Igor Filin
  */
@@ -51,4 +54,11 @@ public class TcLog {
         listener.getLogger().println(formatMessage("[DEBUG] ", message, args));
     }
 
+    public static void printStackTrace(TaskListener listener, Exception e) {
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        e.printStackTrace(printWriter);
+        String stackTrace = stringWriter.toString();
+        error(listener, "\n" + stackTrace);
+    }
 }
