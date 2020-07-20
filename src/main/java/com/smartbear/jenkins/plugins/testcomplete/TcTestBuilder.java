@@ -23,34 +23,39 @@
  */
 
 package com.smartbear.jenkins.plugins.testcomplete;
+
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.smartbear.jenkins.plugins.testcomplete.parser.ILogParser;
+import com.smartbear.jenkins.plugins.testcomplete.parser.LogParser;
 import com.smartbear.jenkins.plugins.testcomplete.parser.LogParser2;
 import com.smartbear.jenkins.plugins.testcomplete.parser.ParserSettings;
-import com.smartbear.jenkins.plugins.testcomplete.parser.LogParser;
 import hudson.*;
 import hudson.model.*;
 import hudson.remoting.VirtualChannel;
+import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Builder;
 import hudson.tasks.junit.TestResult;
 import hudson.tasks.junit.TestResultAction;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
-import hudson.tasks.Builder;
-import hudson.tasks.BuildStepDescriptor;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.*;
 
 import javax.annotation.Nonnull;
 import java.io.*;
 import java.nio.charset.Charset;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -180,6 +185,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private boolean useTCService;
     private String userName;
     private Secret userPassword;
+    private String credentialsId;
     private boolean useActiveSession;
 
     private String sessionScreenResolution;
@@ -207,6 +213,12 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     private static class InvalidConfigurationException extends Exception {
         InvalidConfigurationException(String message) {
+            super(message);
+        }
+    }
+
+    private static class CredentialsNotFoundException extends Exception {
+        CredentialsNotFoundException(String message) {
             super(message);
         }
     }
@@ -406,11 +418,16 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     public String getUserPassword() {
-        return Secret.toString(this.userPassword);
+        return userPassword.getPlainText();
     }
 
-    public Secret getUserPasswordSecret() {
-        return this.userPassword;
+    public String getCredentialsId() {
+        return credentialsId;
+    }
+
+    @DataBoundSetter
+    public void setCredentialsId(String credentialsId) {
+        this.credentialsId = credentialsId;
     }
 
     @DataBoundSetter
@@ -452,6 +469,10 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
+    }
+
+    public boolean usingOldCredentials() {
+        return (!StringUtils.isEmpty(getUserName())) || (!StringUtils.isEmpty(getUserPassword())) && (StringUtils.isEmpty(getCredentialsId()));
     }
 
     private int fixExitCode(int exitCode, Workspace workspace, TaskListener listener) throws IOException, InterruptedException {
@@ -499,7 +520,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         try {
             performInternal(run, filePath, launcher, taskListener);
-        } catch (InvalidConfigurationException | CBTException | TagsException e) {
+        } catch (InvalidConfigurationException | CBTException | TagsException | CredentialsNotFoundException e) {
             TcLog.error(taskListener, e.getMessage());
             run.setResult(Result.FAILURE);
         } finally {
@@ -508,7 +529,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     public void performInternal(Run<?, ?> run, FilePath filePath, Launcher launcher, TaskListener listener)
-            throws IOException, InterruptedException, InvalidConfigurationException, CBTException, TagsException {
+            throws IOException, InterruptedException, InvalidConfigurationException, CBTException, TagsException, CredentialsNotFoundException {
 
         final PrintStream logger = listener.getLogger();
         logger.println();
@@ -630,10 +651,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 return;
             } else {
                 try {
-                    args = prepareServiceCommandLine(listener, chosenInstallation, args, env);
-                }
-                catch (Exception e) {
-                    TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
+                    args = prepareServiceCommandLine(run, listener, chosenInstallation, args, env);
+                } catch (CredentialsNotFoundException e) {
+                    throw e;
+                } catch (Exception e) {
+                    TcLog.printStackTrace(listener, e);
                     TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
                     run.setResult(Result.FAILURE);
                     return;
@@ -644,7 +666,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 args = prepareSessionCreatorCommandLine(listener, chosenInstallation, args, env);
             }
             catch (Exception e) {
-                TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
+                TcLog.printStackTrace(listener, e);
                 TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
                 run.setResult(Result.FAILURE);
                 return;
@@ -866,26 +888,48 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
     }
 
-    private ArgumentListBuilder prepareServiceCommandLine(TaskListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception{
+    private ArgumentListBuilder prepareServiceCommandLine(Run<?, ?> run, TaskListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception {
         ArgumentListBuilder resultArgs = new ArgumentListBuilder();
 
         resultArgs.addQuoted(chosenInstallation.getServicePath());
 
-        String userName = env.expand(getUserName());
         String domain = "";
-        if (userName.contains("\\")) {
-            int pos = userName.lastIndexOf("\\");
-            domain = userName.substring(0, pos);
-            userName = userName.substring(pos + 1);
+        String userName = "";
+        String password = "";
+
+        if (usingOldCredentials()) {
+            userName = env.expand(getUserName());
+            password = env.expand(getUserPassword());
+        } else {
+            String credentialsId = env.expand(getCredentialsId());
+
+            if (!StringUtils.isEmpty(credentialsId)) {
+                StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(credentialsId, StandardUsernamePasswordCredentials.class, run);
+
+                if (credentials == null) {
+                    throw new CredentialsNotFoundException(String.format(Messages.TcTestBuilder_CredentialsNotFound(), credentialsId));
+                }
+
+                userName = credentials.getUsername();
+                password = credentials.getPassword().getPlainText();
+            }
         }
+
+        if (!StringUtils.isEmpty(userName)) {
+            if (userName.contains("\\")) {
+                int pos = userName.lastIndexOf("\\");
+                domain = userName.substring(0, pos);
+                userName = userName.substring(pos + 1);
+            }
+        }
+
+        // check credentials
 
         resultArgs.add(Constants.SERVICE_ARG);
 
         resultArgs.add(Constants.SERVICE_ARG_DOMAIN).addQuoted(domain);
         resultArgs.add(Constants.SERVICE_ARG_NAME).addQuoted(userName);
-
-        String encryptedPassword = Utils.encryptPassword(env.expand(getUserPassword()));
-        resultArgs.add(Constants.SERVICE_ARG_PASSWORD).addQuoted(encryptedPassword, true);
+        resultArgs.add(Constants.SERVICE_ARG_PASSWORD).addQuoted(Utils.encryptPassword(password), true);
 
         long timeout = getTimeoutValue(null, env);
 
@@ -1381,6 +1425,34 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return Messages.TcTestBuilder_DisplayName();
         }
 
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Item item, @QueryParameter String credentialsId) {
+            return getCredentialList(item, credentialsId);
+        }
+
+        private ListBoxModel getCredentialList(Item item, String credentialsId) {
+            StandardListBoxModel result = new StandardListBoxModel();
+            if (item == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return result.add(credentialsId);
+                }
+            } else {
+                if (!item.hasPermission(Item.EXTENDED_READ) && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                    return result.add(credentialsId);
+                }
+            }
+
+            List<StandardUsernamePasswordCredentials> standardCredentials = CredentialsProvider.lookupCredentials(
+                    StandardUsernamePasswordCredentials.class,
+                    item,
+                    null,
+                    Collections.emptyList());
+
+            return result
+                    .withEmptySelection()
+                    .withAll(standardCredentials)
+                    .withMatching(CredentialsMatchers.withId(credentialsId));
+
+        }
     }
 
 }

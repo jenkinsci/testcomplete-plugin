@@ -1,5 +1,5 @@
 <?jelly escape-by-default='false'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials" >
 
   <f:block>
 
@@ -86,12 +86,15 @@
         </f:optionalBlock>
 
         <f:optionalBlock title="${%UseTCServiceForProcessLaunching}" inline="true" field="useTCService">
-          <f:entry title="${%UserName}" field="userName" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/userName.html">
-            <f:textbox />
-          </f:entry>
 
-          <f:entry title="${%UserPassword}" field="userPassword" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/userPassword.html">
-            <f:password/>
+          <j:if test="${instance.usingOldCredentials()}">
+            <f:block>
+                <div style="font-weight: bold; padding: 8px; color:red;">${%AnOldCredentialsUsed}</div>
+            </f:block>
+          </j:if>
+
+          <f:entry field="credentialsId" title="${%Credentials}">
+              <c:select />
           </f:entry>
 
           <f:entry title="${%UseActiveSession}" field="useActiveSession" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/useActiveSession.html">
