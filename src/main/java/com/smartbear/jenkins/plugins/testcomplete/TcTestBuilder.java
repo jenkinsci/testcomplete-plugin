@@ -417,8 +417,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         this.userPassword = Secret.fromString(userPassword);
     }
 
-    public String getUserPassword() {
-        return userPassword.getPlainText();
+    public Secret getUserPassword() {
+        return userPassword;
     }
 
     public String getCredentialsId() {
@@ -472,7 +472,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     public boolean usingOldCredentials() {
-        return (!StringUtils.isEmpty(getUserName())) || (!StringUtils.isEmpty(getUserPassword())) && (StringUtils.isEmpty(getCredentialsId()));
+        return ((!StringUtils.isEmpty(getUserName())) || (!StringUtils.isEmpty(getUserPassword().getPlainText()))) && (StringUtils.isEmpty(getCredentialsId()));
     }
 
     private int fixExitCode(int exitCode, Workspace workspace, TaskListener listener) throws IOException, InterruptedException {
@@ -899,7 +899,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         if (usingOldCredentials()) {
             userName = env.expand(getUserName());
-            password = env.expand(getUserPassword());
+            password = env.expand(getUserPassword().getPlainText());
         } else {
             String credentialsId = env.expand(getCredentialsId());
 
