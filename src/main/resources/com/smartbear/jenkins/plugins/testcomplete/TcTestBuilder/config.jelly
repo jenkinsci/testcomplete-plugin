@@ -62,6 +62,11 @@
       </f:entry>
     </f:radioBlock>
 
+    <f:invisibleEntry>
+      <f:readOnlyTextbox field="userName"/>
+      <f:password field="userPassword"/>
+    </f:invisibleEntry>
+
     <f:section title="${%ExecutorSettings}">
       <f:advanced>
         <f:entry title="${%Executor}" field="executorType" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/executorType.html">
