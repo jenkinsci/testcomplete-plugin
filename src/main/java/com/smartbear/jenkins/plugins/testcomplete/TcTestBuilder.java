@@ -1324,7 +1324,12 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         @Override
         public Builder newInstance(StaplerRequest req, @Nonnull JSONObject formData) throws FormException {
-            return super.newInstance(req, formData);
+            TcTestBuilder builder = (TcTestBuilder)super.newInstance(req, formData);
+            if (!StringUtils.isEmpty(builder.getCredentialsId())) {
+                builder.setUserName("");
+                builder.setUserPassword("");
+            }
+            return builder;
         }
 
         public FormValidation doCheckSuite(@QueryParameter String value) {
