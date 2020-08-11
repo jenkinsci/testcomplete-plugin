@@ -81,6 +81,9 @@ If you have any questions or need assistance with setting up the plugin and conf
 
 ## *Version History*
 
+#### Version 2.5.2
+-   *New feature*: Added integration with Credentials plugin.
+
 #### Version 2.5.1
 -   *Fixed*: A potential security vulnerability. The password of user accounts used to open interactive user sessions on Jenkins nodes was stored as plain text.
 
