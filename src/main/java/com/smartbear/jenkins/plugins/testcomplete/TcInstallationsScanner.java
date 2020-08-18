@@ -68,6 +68,7 @@ class TcInstallationsScanner implements Serializable {
             List<TcInstallation> result = new ArrayList<>();
             scanForInstallations(result, "TestComplete", TcInstallation.ExecutorType.TC);
             scanForInstallations(result, "TestExecute", TcInstallation.ExecutorType.TE);
+            scanForInstallations(result, "TestExecuteLite", TcInstallation.ExecutorType.TELite);
             return result;
         }
 

@@ -46,7 +46,8 @@ public class TcInstallation implements Serializable{
 
     public enum ExecutorType {
         TC,
-        TE
+        TE,
+        TELite
     }
 
     private final static int VERSION_PARTS = 3;

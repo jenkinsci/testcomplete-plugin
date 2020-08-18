@@ -516,10 +516,9 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                         @Nonnull TaskListener taskListener) throws InterruptedException, IOException {
 
         Computer currentComputer = filePath.toComputer();
-        busyNodes.lock(currentComputer, taskListener);
 
         try {
-            performInternal(run, filePath, launcher, taskListener);
+            performInternal(run, filePath, launcher, taskListener, currentComputer);
         } catch (InvalidConfigurationException | CBTException | TagsException | CredentialsNotFoundException e) {
             TcLog.error(taskListener, e.getMessage());
             run.setResult(Result.FAILURE);
@@ -528,7 +527,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
     }
 
-    public void performInternal(Run<?, ?> run, FilePath filePath, Launcher launcher, TaskListener listener)
+    public void performInternal(Run<?, ?> run, FilePath filePath, Launcher launcher, TaskListener listener, Computer currentComputer)
             throws IOException, InterruptedException, InvalidConfigurationException, CBTException, TagsException, CredentialsNotFoundException {
 
         final PrintStream logger = listener.getLogger();
@@ -606,6 +605,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         TcLog.info(listener, Messages.TcTestBuilder_ChosenInstallation() + "\n\t" + chosenInstallation);
 
+        boolean isTELite = chosenInstallation.getType() == TcInstallation.ExecutorType.TELite;
+        if (!isTELite) {
+            busyNodes.lock(currentComputer, listener);
+        }
+
         // Generating  paths
         final Workspace workspace;
         try {
@@ -622,6 +626,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         boolean needToUseService = useTCService;
 
+        if (needToUseService && isTELite) {
+            TcLog.warning(listener, Messages.TcTestBuilder_UnableToCreateSessionForTELite());
+            needToUseService = false;
+        }
+
         if (needToUseService && isJNLPSlave) {
             TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithJNLP());
             needToUseService = false;
@@ -632,18 +641,20 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         // Making the command line
         ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation, useSessionCreator);
 
-        if (!isJNLPSlave && !useTCService) {
+        if (!isJNLPSlave && !needToUseService) {
             if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
                 TcLog.error(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
                 TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
                 run.setResult(Result.FAILURE);
                 return;
             } else {
-                TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
+                if (!isTELite) {
+                    TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
+                }
             }
         }
 
-        if (useTCService && !isJNLPSlave) {
+        if (needToUseService && !isJNLPSlave) {
             if (!chosenInstallation.isServiceLaunchingAvailable()) {
                 TcLog.info(listener, Messages.TcTestBuilder_UnableToLaunchByServiceUnsupportedVersion());
                 TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
@@ -688,7 +699,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             long realTimeout = getTimeoutValue(null, env);
             if (realTimeout != -1) {
                 realTimeout += Constants.WAITING_AFTER_TIMEOUT_INTERVAL;
-                if (useTCService) {
+                if (needToUseService) {
                     realTimeout += Constants.SERVICE_INTERVAL_DELAY;
                 }
             }
@@ -1381,6 +1392,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             model.add(Messages.TcTestBuilder_Descriptor_AnyTagText(), Constants.ANY_CONSTANT);
             model.add(Constants.TE_NAME, TcInstallation.ExecutorType.TE.toString());
             model.add(Constants.TC_NAME, TcInstallation.ExecutorType.TC.toString());
+            model.add(Constants.TELite_NAME, TcInstallation.ExecutorType.TELite.toString());
             return model;
         }
 
