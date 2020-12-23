@@ -78,7 +78,6 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private static final String TEST_ARG = "/test:";
     private static final String NO_LOG_ARG = "/DoNotShowLog";
     private static final String FORCE_CONVERSION_ARG = "/ForceConversion";
-    private static final String USE_CBT_INTEGRATION_ARG = "/env";
     private static final String VERSION_ARG = "/JenkinsTCPluginVersion:";
     private static final String TAGS_ARG = "/tags:";
 
@@ -642,15 +641,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation, useSessionCreator);
 
         if (!isJNLPSlave && !needToUseService) {
-            if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
-                TcLog.error(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
-                TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
-                run.setResult(Result.FAILURE);
-                return;
-            } else {
-                if (!isTELite) {
-                    TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
-                }
+            if (!isTELite) {
+                TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
             }
         }
 
@@ -1260,16 +1252,6 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
             addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
             addArg(args, TEST_ARG + env.expand(getTest()), useNewCommandLineFormat);
-        } else if (TcInstallation.LaunchType.lcCBT.name().equals(launchType)) {
-            if (installation.getType().equals(TcInstallation.ExecutorType.TE)) {
-                throw new CBTException(Messages.TcTestBuilder_CBT_UnableToUseTE());
-            }
-
-            if (installation.compareVersion("12.20", false) < 0) {
-                throw new CBTException(Messages.TcTestBuilder_CBT_NotSupportedTCVersion());
-            }
-
-            args.add(USE_CBT_INTEGRATION_ARG);
         }
 
         if (installation.getType() == TcInstallation.ExecutorType.TE) {
@@ -1340,6 +1322,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 builder.setUserName("");
                 builder.setUserPassword("");
             }
+
+            if (TcInstallation.LaunchType.lcCBT.name().equals(builder.getLaunchType())) {
+                builder.setLaunchType(TcInstallation.LaunchType.lcSuite.name());
+            }
+
             return builder;
         }
 

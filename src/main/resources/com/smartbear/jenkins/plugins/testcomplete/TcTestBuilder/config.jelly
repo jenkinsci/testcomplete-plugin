@@ -50,9 +50,6 @@
       </f:entry>
     </f:radioBlock>
 
-    <f:radioBlock name="launchConfig" title="${%TypeCBT}" value="lcCBT" checked="${instance.launchType == 'lcCBT'}" >
-    </f:radioBlock>
-
     <f:radioBlock title="${%TypeTestItem}" name="launchConfig" value="lcItem" checked="${instance.launchType == 'lcItem'}" >
       <f:entry title="${%Project}" field="project" description="${%ProjectDescription}">
         <f:textbox value="${instance.launchType == 'lcItem' &amp;&amp; instance.project != null ? instance.project : ''}" />

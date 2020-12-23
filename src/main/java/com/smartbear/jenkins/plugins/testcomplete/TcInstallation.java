@@ -41,7 +41,7 @@ public class TcInstallation implements Serializable{
         lcRoutine,
         lcKdt,
         lcItem,
-        lcCBT
+        lcCBT // deprecated
     }
 
     public enum ExecutorType {
