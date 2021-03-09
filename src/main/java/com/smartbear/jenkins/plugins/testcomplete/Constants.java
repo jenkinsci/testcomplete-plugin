@@ -31,7 +31,6 @@ public class Constants {
 
     public static final String TC_NAME = "TestComplete";
     public static final String TE_NAME = "TestExecute";
-    public static final String TELite_NAME = "TestExecute Lite (Device Cloud Parallel tests)";
     public static final String TC_SERVICE_EXEC_NAME = "TestCompleteService%d.exe";
     public static final String TC_SESSION_CREATOR_EXEC_NAME = "SessionCreator.exe";
 

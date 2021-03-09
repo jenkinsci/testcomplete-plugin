@@ -336,6 +336,10 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     public String getExecutorType() {
+        if (TcInstallation.ExecutorType.TELite.name().equals(executorType)) {
+            return TcInstallation.ExecutorType.TE.name();
+        }
+
         return executorType;
     }
 
@@ -593,6 +597,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         TcLog.info(listener, msgBuilder.toString());
 
+        if (TcInstallation.ExecutorType.TELite.name().equals(executorType)) {
+            TcLog.warning(listener, Messages.TcTestBuilder_TELiteIsDeprecatedWarning());
+            setExecutorType(TcInstallation.ExecutorType.TE.name());
+        }
+
         final TcInstallation chosenInstallation = scanner.findInstallation(installations, getExecutorType(), getExecutorVersion());
 
         if (chosenInstallation == null) {
@@ -604,10 +613,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         TcLog.info(listener, Messages.TcTestBuilder_ChosenInstallation() + "\n\t" + chosenInstallation);
 
-        boolean isTELite = chosenInstallation.getType() == TcInstallation.ExecutorType.TELite;
-        if (!isTELite) {
-            busyNodes.lock(currentComputer, listener);
-        }
+        busyNodes.lock(currentComputer, listener);
 
         // Generating  paths
         final Workspace workspace;
@@ -625,11 +631,6 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         boolean needToUseService = useTCService;
 
-        if (needToUseService && isTELite) {
-            TcLog.warning(listener, Messages.TcTestBuilder_UnableToCreateSessionForTELite());
-            needToUseService = false;
-        }
-
         if (needToUseService && isJNLPSlave) {
             TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithJNLP());
             needToUseService = false;
@@ -641,9 +642,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation, useSessionCreator);
 
         if (!isJNLPSlave && !needToUseService) {
-            if (!isTELite) {
-                TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
-            }
+            TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
         }
 
         if (needToUseService && !isJNLPSlave) {
@@ -1379,7 +1378,6 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             model.add(Messages.TcTestBuilder_Descriptor_AnyTagText(), Constants.ANY_CONSTANT);
             model.add(Constants.TE_NAME, TcInstallation.ExecutorType.TE.toString());
             model.add(Constants.TC_NAME, TcInstallation.ExecutorType.TC.toString());
-            model.add(Constants.TELite_NAME, TcInstallation.ExecutorType.TELite.toString());
             return model;
         }
 
