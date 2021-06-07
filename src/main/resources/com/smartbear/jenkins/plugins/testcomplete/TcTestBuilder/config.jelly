@@ -72,6 +72,9 @@
         <f:entry title="${%Version}" field="executorVersion" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/executorVersion.html">
           <f:select />
         </f:entry>
+        <f:entry field="accessKeyId" title="${%AccessKey}" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/accessKey.html">
+          <c:select />
+        </f:entry>
         <f:entry title="${%ActionOnWarningsTitle}" field="actionOnWarnings" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/actionOnWarnings.html">
           <f:select default="NONE"/>
         </f:entry>

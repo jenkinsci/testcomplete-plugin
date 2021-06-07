@@ -50,11 +50,14 @@ import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.*;
 
 import javax.annotation.Nonnull;
 import java.io.*;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -80,6 +83,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private static final String FORCE_CONVERSION_ARG = "/ForceConversion";
     private static final String VERSION_ARG = "/JenkinsTCPluginVersion:";
     private static final String TAGS_ARG = "/tags:";
+    private static final String ACCESS_KEY_ARG = "/accesskey:";
 
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
     private static final String KEEP_LOGS_FLAG_NAME = "TESTCOMPLETE_PLUGIN_KEEP_LOGS";
@@ -186,6 +190,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private Secret userPassword;
     private String credentialsId;
     private boolean useActiveSession;
+    private String accessKeyId;
 
     private String sessionScreenResolution;
 
@@ -248,6 +253,9 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         this.userName = "";
         this.userPassword = Secret.fromString("");
         this.useActiveSession = true;
+
+        this.credentialsId = "";
+        this.accessKeyId = "";
 
         this.generateMHT = false;
         this.publishJUnitReports = true;
@@ -440,6 +448,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     public boolean getUseActiveSession() {
         return useActiveSession;
+    }
+
+    public String getAccessKeyId() {
+        return accessKeyId;
+    }
+
+    @DataBoundSetter
+    public void setAccessKeyId(String accessKeyId) {
+        this.accessKeyId = accessKeyId;
     }
 
     @DataBoundSetter
@@ -639,7 +656,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         boolean useSessionCreator = chosenInstallation.hasExtendedCommandLine() && (!needToUseService);
 
         // Making the command line
-        ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation, useSessionCreator);
+        List<String> passwordsToMask = new ArrayList<>();
+        ArgumentListBuilder args = makeCommandLineArgs(run, launcher, listener, workspace, chosenInstallation, useSessionCreator, passwordsToMask);
 
         if (!isJNLPSlave && !needToUseService) {
             TcLog.warning(listener, Messages.TcTestBuilder_SlaveConnectedWithService());
@@ -696,8 +714,16 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             }
 
             long startTime = Utils.getSystemTime(launcher.getChannel(), listener);
+            Launcher.ProcStarter processStarter = null;
 
-            Launcher.ProcStarter processStarter = launcher.launch().cmds(args).envs(run.getEnvironment(listener));
+            // need to mask any data
+            if (passwordsToMask.size() > 0) {
+                Launcher decoratedLauncher = new CustomDecoratedLauncher(launcher, passwordsToMask);
+                processStarter = decoratedLauncher.launch().cmds(args).envs(run.getEnvironment(listener)).quiet(true);
+            } else {
+                processStarter = launcher.launch().cmds(args).envs(run.getEnvironment(listener));
+            }
+
             processStarter.readStdout();
 
             process = processStarter.start();
@@ -1201,7 +1227,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                                                     TaskListener listener,
                                                     Workspace workspace,
                                                     TcInstallation installation,
-                                                    boolean useNewCommandLineFormat) throws IOException, InterruptedException, CBTException, TagsException {
+                                                    boolean useNewCommandLineFormat,
+                                                    Collection<String> passwordsToMask) throws IOException, InterruptedException, TagsException, CredentialsNotFoundException {
         ArgumentListBuilder args = new ArgumentListBuilder();
 
         FilePath execPath = new FilePath(launcher.getChannel(), installation.getExecutorPath());
@@ -1212,6 +1239,21 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         addArg(args, new FilePath(workspace.getSlaveWorkspacePath(), env.expand(getSuite())).getRemote(), useNewCommandLineFormat);
 
         args.add(RUN_ARG);
+
+        String accessKeyId = env.expand(getAccessKeyId());
+
+        if (!StringUtils.isEmpty(accessKeyId)) {
+            StringCredentials credentials = CredentialsProvider.findCredentialById(accessKeyId, StringCredentials.class, run);
+
+            if (credentials == null) {
+                throw new CredentialsNotFoundException(String.format(Messages.TcTestBuilder_AccessKeyNotFound(), accessKeyId));
+            }
+
+            String accessKey = credentials.getSecret().getPlainText();
+            args.add(ACCESS_KEY_ARG + accessKey, true);
+            passwordsToMask.add(accessKey);
+        }
+
         args.add(SILENT_MODE_ARG);
         args.add(FORCE_CONVERSION_ARG);
         args.add(NS_ARG);
@@ -1453,6 +1495,35 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                     .withEmptySelection()
                     .withAll(standardCredentials)
                     .withMatching(CredentialsMatchers.withId(credentialsId));
+
+        }
+
+        public ListBoxModel doFillAccessKeyIdItems(@AncestorInPath Item item, @QueryParameter String accessKeyId) {
+            return getAccessKeyIdCredentialList(item, accessKeyId);
+        }
+
+        private ListBoxModel getAccessKeyIdCredentialList(Item item, String accessKeyId) {
+            StandardListBoxModel result = new StandardListBoxModel();
+            if (item == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return result.add(accessKeyId);
+                }
+            } else {
+                if (!item.hasPermission(Item.EXTENDED_READ) && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                    return result.add(accessKeyId);
+                }
+            }
+
+            List<StringCredentials> stringCredentials = CredentialsProvider.lookupCredentials(
+                    StringCredentials.class,
+                    item,
+                    null,
+                    Collections.emptyList());
+
+            return result
+                    .withEmptySelection()
+                    .withAll(stringCredentials)
+                    .withMatching(CredentialsMatchers.withId(accessKeyId));
 
         }
     }
