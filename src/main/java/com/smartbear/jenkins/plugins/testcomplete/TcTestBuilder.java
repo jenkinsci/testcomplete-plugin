@@ -1436,6 +1436,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         public ListBoxModel doFillExecutorVersionItems() {
             ListBoxModel model = new ListBoxModel();
             model.add(Messages.TcTestBuilder_Descriptor_LatestTagText(), Constants.ANY_CONSTANT);
+            model.add("15", "15.0");
             model.add("14", "14.0");
             model.add("12", "12.0");
             model.add("11", "11.0");
