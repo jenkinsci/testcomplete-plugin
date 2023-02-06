@@ -37,6 +37,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import javax.xml.XMLConstants;
 
 /**
  * @author Igor Filin
@@ -155,6 +156,30 @@ class LogNodeUtils {
         return null;
     }
 
+    static private final String DISALLOW_DOCTYPE_DECL = 
+        "http://apache.org/xml/features/disallow-doctype-decl";
+    
+    static private final String EXTERNAL_GENERAL_ENTITIES = 
+        "http://xml.org/sax/features/external-general-entities";
+
+    static private final String EXTERNAL_PARAMETER_ENTITIES = 
+        "http://xml.org/sax/features/external-parameter-entities";
+
+    static private final String LOAD_EXTERNAL_DTD = 
+        "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+
+    // This is added to prevent XXE attack on xml parser
+    static private void secureDocumentBuilderFactory(DocumentBuilderFactory factory) 
+        throws ParserConfigurationException {
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature(EXTERNAL_GENERAL_ENTITIES , false);
+        factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
+        factory.setFeature(LOAD_EXTERNAL_DTD, false);
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
+    }
+
+
     static public Node getRootDocumentNodeFromArchive(ZipFile archive, String name) {
         if (name == null) {
             return null;
@@ -169,6 +194,7 @@ class LogNodeUtils {
         try {
             logDataStream = archive.getInputStream(rootLogDataEntry);
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            secureDocumentBuilderFactory(factory);
             DocumentBuilder builder = factory.newDocumentBuilder();
 
             Document document = builder.parse(logDataStream);
