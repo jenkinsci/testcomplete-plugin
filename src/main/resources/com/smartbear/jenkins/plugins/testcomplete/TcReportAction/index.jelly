@@ -5,16 +5,16 @@
 
         <l:side-panel>
             <l:tasks>
-                <l:task icon="images/24x24/up.png" href="../.." title="${%BackToSummary}" />
+                <l:task icon="icon-up icon-md" href="../.." title="${%BackToSummary}" />
 
                 <j:set var="nextReport" value="${it.parent.getNextReport(it)}"/>
                 <j:if test="${nextReport != null}">
-                    <l:task icon="images/24x24/next.png" href="../${nextReport.id}" title="${%NextReport}" />
+                    <l:task icon="icon-next icon-md" href="../${nextReport.id}" title="${%NextReport}" />
                 </j:if>
 
                 <j:set var="previousReport" value="${it.parent.getPreviousReport(it)}"/>
                 <j:if test="${previousReport != null}">
-                    <l:task icon="images/24x24/previous.png" href="../${previousReport.id}" title="${%PreviousReport}" />
+                    <l:task icon="icon-previous icon-md" href="../${previousReport.id}" title="${%PreviousReport}" />
                 </j:if>
             </l:tasks>
         </l:side-panel>
