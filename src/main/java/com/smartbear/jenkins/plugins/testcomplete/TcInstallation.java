@@ -28,6 +28,7 @@ import hudson.FilePath;
 
 import java.io.File;
 import java.io.Serializable;
+import java.util.Optional;
 
 /**
  * @author Igor Filin
@@ -73,12 +74,11 @@ public class TcInstallation implements Serializable{
     }
 
     public String getSessionCreatorPath() {
-        FilePath parent = new FilePath(new File(executorPath)).getParent();
-        if(parent != null)
-        {
-            return parent.getRemote() + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME;
-        }
-        return "";
+        return Optional.ofNullable(new FilePath(new File(executorPath)))
+            .map(filepath -> filepath.getParent())
+            .map(parent -> parent.getRemote())
+            .map(remote -> remote + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME)
+            .orElse("");
     }
 
     public ExecutorType getType() {

@@ -62,6 +62,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -508,8 +509,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveExitCodeFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
 
                 try {
-                    String line = br.readLine();
-                    String exiCodeString = (line != null ? line : "").trim();
+                    String exiCodeString = Optional.ofNullable(br.readLine()).orElse("").trim();
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeRead(), exiCodeString);
                     }
@@ -650,22 +650,12 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return;
         }
 
-        boolean isJNLPSlave = false;
+        boolean isJNLPSlave = Optional.ofNullable(filePath)
+            .map(fpath -> fpath.toComputer())
+            .map(comp -> !comp.isLaunchSupported())
+            .orElse(false) && !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
 
-        {
-            Computer computer = filePath.toComputer();
-            
-            if(computer != null)
-            {
-                isJNLPSlave = !computer.isLaunchSupported() &&
-                        !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
-            }
-            else
-            {
-                run.setResult(Result.FAILURE);
-                return;
-            }
-        }
+        
 
         boolean needToUseService = useTCService;
 
@@ -715,19 +705,14 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         // TC/TE launching and data processing
-        TcReportAction tcReportAction = null;
-
-        {
-            Computer computer = filePath.toComputer();
-            if(computer != null)
-            {
-                Node node =  computer.getNode();
-                if(node != null)
-                {
-                    tcReportAction = new TcReportAction(run, workspace.getLogId(), testDisplayName, node.getDisplayName());
-                }
-            }
-        }
+        TcReportAction tcReportAction = Optional.ofNullable(filePath)
+            .map(fpath -> fpath.toComputer())
+            .map(computer -> computer.getNode())
+            .map(node -> new TcReportAction(run
+                , workspace.getLogId()
+                , testDisplayName
+                , node.getDisplayName()))
+            .orElse(null);
 
         if(tcReportAction == null)
         {
@@ -1064,8 +1049,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         try {
             if (workspace.getSlaveErrorFilePath().exists()) {
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveErrorFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
-                String line = br.readLine();
-                String errorString = (line != null ? line : "").trim();
+                String errorString = Optional.ofNullable(br.readLine()).orElse("").trim();
                 TcLog.warning(listener, Messages.TcTestBuilder_ErrorMessage(), errorString);
                 testResult.setError(errorString);
             }
