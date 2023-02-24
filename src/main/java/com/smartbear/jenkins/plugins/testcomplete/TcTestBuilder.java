@@ -35,6 +35,7 @@ import com.smartbear.jenkins.plugins.testcomplete.parser.ParserSettings;
 import hudson.*;
 import hudson.model.*;
 import hudson.remoting.VirtualChannel;
+import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Builder;
@@ -60,6 +61,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -88,6 +90,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
     private static final String KEEP_LOGS_FLAG_NAME = "TESTCOMPLETE_PLUGIN_KEEP_LOGS";
 
+    private static final long serialVersionUID = 5647386534856348764L;
+    
     public static class LaunchConfig {
 
         private String launchType;
@@ -504,11 +508,14 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveExitCodeFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
 
                 try {
-                    String exiCodeString = br.readLine().trim();
+                    String line = br.readLine();
+                    String exiCodeString = (line != null ? line : "").trim();
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeRead(), exiCodeString);
                     }
                     fixedCode = Integer.parseInt(exiCodeString);
+                } catch (RuntimeException e) {
+                    throw e;
                 } catch (Exception e) {
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeReadFailed());
@@ -643,8 +650,22 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return;
         }
 
-        boolean isJNLPSlave = !filePath.toComputer().isLaunchSupported() &&
-                !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
+        boolean isJNLPSlave = false;
+
+        {
+            Computer computer = filePath.toComputer();
+            
+            if(computer != null)
+            {
+                isJNLPSlave = !computer.isLaunchSupported() &&
+                        !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
+            }
+            else
+            {
+                run.setResult(Result.FAILURE);
+                return;
+            }
+        }
 
         boolean needToUseService = useTCService;
 
@@ -694,8 +715,25 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         // TC/TE launching and data processing
-        final TcReportAction tcReportAction = new TcReportAction(run, workspace.getLogId(), testDisplayName,
-                filePath.toComputer().getNode().getDisplayName());
+        TcReportAction tcReportAction = null;
+
+        {
+            Computer computer = filePath.toComputer();
+            if(computer != null)
+            {
+                Node node =  computer.getNode();
+                if(node != null)
+                {
+                    tcReportAction = new TcReportAction(run, workspace.getLogId(), testDisplayName, node.getDisplayName());
+                }
+            }
+        }
+
+        if(tcReportAction == null)
+        {
+            run.setResult(Result.FAILURE);
+            return;
+        }
 
         int exitCode = -2;
         int fixedExitCode = exitCode;
@@ -736,7 +774,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             }
 
             if (DEBUG && (processStdout != null)) {
-                String processOutput = IOUtils.toString(processStdout);
+                String processOutput = IOUtils.toString(processStdout, "UTF-8");
                 if ((processOutput != null) && (!processOutput.isEmpty())) {
                     TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExecutorOutput() + "\n" + processOutput);
                 }
@@ -863,7 +901,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
                 if (testResultAction == null) {
                     TestResult testResult = new hudson.tasks.junit.TestResult(true);
-                    testResult.parse(new File(reportFile.getRemote()));
+                    testResult.parse(new File(reportFile.getRemote()), null);
                     testResultAction = new TestResultAction(run, testResult, listener);
 
                     if (DEBUG) {
@@ -877,7 +915,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                     run.addAction(testResultAction);
                 } else {
                     TestResult testResult = testResultAction.getResult();
-                    testResult.parse(new File(reportFile.getRemote()));
+                    testResult.parse(new File(reportFile.getRemote()), null);
                     testResult.tally();
                     testResultAction.setResult(testResult, listener);
 
@@ -1026,7 +1064,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         try {
             if (workspace.getSlaveErrorFilePath().exists()) {
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveErrorFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
-                String errorString = br.readLine().trim();
+                String line = br.readLine();
+                String errorString = (line != null ? line : "").trim();
                 TcLog.warning(listener, Messages.TcTestBuilder_ErrorMessage(), errorString);
                 testResult.setError(errorString);
             }
@@ -1157,23 +1196,23 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private String getExitCodeDescription(int exitCode) {
         switch (exitCode) {
             case -6:
-                return Messages.TcServiceProcessNotAvailable();
+                return Messages.ErrorMessages_TcServiceProcessNotAvailable();
             case -7:
-                return Messages.TcServiceInvalidArgs();
+                return Messages.ErrorMessages_TcServiceInvalidArgs();
             case -8:
-                return Messages.TcServiceInternalError();
+                return Messages.ErrorMessages_TcServiceInternalError();
             case -9:
-                return Messages.TcServiceInternalError();
+                return Messages.ErrorMessages_TcServiceInternalError();
             case -10:
-                return Messages.TcServiceSessionCreationError();
+                return Messages.ErrorMessages_TcServiceSessionCreationError();
             case -11:
-                return Messages.TcServiceSessionLogOffError();
+                return Messages.ErrorMessages_TcServiceSessionLogOffError();
             case -12:
-                return Messages.TcServiceProcessCreationError();
+                return Messages.ErrorMessages_TcServiceProcessCreationError();
             case -13:
-                return Messages.TcServiceTimeout();
+                return Messages.ErrorMessages_TcServiceTimeout();
             case -14:
-                return Messages.TcServiceOldVersion();
+                return Messages.ErrorMessages_TcServiceOldVersion();
             default:
                 return null;
         }
@@ -1461,6 +1500,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return model;
         }
 
+        @Override
+        @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
         }
@@ -1474,6 +1515,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return getCredentialList(item, credentialsId);
         }
 
+        @SuppressWarnings("deprecation")
         private ListBoxModel getCredentialList(Item item, String credentialsId) {
             StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
@@ -1486,23 +1528,27 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 }
             }
 
-            List<StandardUsernamePasswordCredentials> standardCredentials = CredentialsProvider.lookupCredentials(
-                    StandardUsernamePasswordCredentials.class,
-                    item,
-                    null,
-                    Collections.emptyList());
-
+            // TODO: Change the deprecated ACL.SYSTEM once we have 
+            // a proper replacement 
             return result
-                    .withEmptySelection()
-                    .withAll(standardCredentials)
-                    .withMatching(CredentialsMatchers.withId(credentialsId));
-
+                .includeEmptyValue()
+                .includeAs(ACL.SYSTEM
+                    ,item
+                    , StandardUsernamePasswordCredentials.class
+                    , Collections.emptyList())
+                .includeMatchingAs(ACL.SYSTEM
+                    ,item
+                    , StandardUsernamePasswordCredentials.class
+                    , Collections.emptyList()
+                    , CredentialsMatchers.withId(credentialsId));
+            
         }
 
         public ListBoxModel doFillAccessKeyIdItems(@AncestorInPath Item item, @QueryParameter String accessKeyId) {
             return getAccessKeyIdCredentialList(item, accessKeyId);
         }
 
+        @SuppressWarnings("deprecation")
         private ListBoxModel getAccessKeyIdCredentialList(Item item, String accessKeyId) {
             StandardListBoxModel result = new StandardListBoxModel();
             if (item == null) {
@@ -1515,16 +1561,19 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 }
             }
 
-            List<StringCredentials> stringCredentials = CredentialsProvider.lookupCredentials(
-                    StringCredentials.class,
-                    item,
-                    null,
-                    Collections.emptyList());
-
+            // TODO: Change the deprecated ACL.SYSTEM once we have 
+            // a proper replacement  
             return result
-                    .withEmptySelection()
-                    .withAll(stringCredentials)
-                    .withMatching(CredentialsMatchers.withId(accessKeyId));
+                .includeEmptyValue()
+                .includeAs(ACL.SYSTEM
+                    ,item
+                    , StringCredentials.class
+                    , Collections.emptyList())
+                .includeMatchingAs(ACL.SYSTEM
+                    ,item
+                    , StringCredentials.class
+                    , Collections.emptyList()
+                    , CredentialsMatchers.withId(accessKeyId));
 
         }
     }

@@ -126,8 +126,9 @@ public class LogParser implements ILogParser {
             logInfo.setXML(xml);
 
             return logInfo;
-        }
-        catch (Exception e) {
+        } catch(RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
             return null;
         }

@@ -156,9 +156,7 @@ class LogNodeUtils {
         return null;
     }
 
-    static private final String DISALLOW_DOCTYPE_DECL = 
-        "http://apache.org/xml/features/disallow-doctype-decl";
-    
+   
     static private final String EXTERNAL_GENERAL_ENTITIES = 
         "http://xml.org/sax/features/external-general-entities";
 
@@ -297,7 +295,7 @@ class LogNodeUtils {
             map.put(index, msg);
         }
 
-        List<Integer> keys = new ArrayList(map.keySet());
+        ArrayList<Integer> keys = new ArrayList<Integer>(map.keySet());
         Collections.sort(keys);
 
         for (Integer key : keys) {

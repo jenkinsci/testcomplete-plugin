@@ -73,7 +73,12 @@ public class TcInstallation implements Serializable{
     }
 
     public String getSessionCreatorPath() {
-        return new FilePath(new File(executorPath)).getParent().getRemote() + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME;
+        FilePath parent = new FilePath(new File(executorPath)).getParent();
+        if(parent != null)
+        {
+            return parent.getRemote() + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME;
+        }
+        return "";
     }
 
     public ExecutorType getType() {

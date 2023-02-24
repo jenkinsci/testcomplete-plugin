@@ -26,22 +26,20 @@ public class CustomDecoratedLauncher extends Launcher.DecoratedLauncher {
 
             int nbMaskedPasswords = 0;
 
-            if(passwords != null && passwords.size() > 0) {
-                for(String password: passwords) {
-                    if(StringUtils.isNotEmpty(password)) {
-                        regex.append(Pattern.quote(password));
-                        regex.append('|');
-                        try {
-                            String encodedPassword = URLEncoder.encode(password, "UTF-8");
-                            if (!encodedPassword.equals(password)) {
-                                regex.append(Pattern.quote(encodedPassword));
-                                regex.append('|');
-                            }
-                        } catch (UnsupportedEncodingException e) {
-                            // ignore
+            for(String password: passwords) {
+                if(StringUtils.isNotEmpty(password)) {
+                    regex.append(Pattern.quote(password));
+                    regex.append('|');
+                    try {
+                        String encodedPassword = URLEncoder.encode(password, "UTF-8");
+                        if (!encodedPassword.equals(password)) {
+                            regex.append(Pattern.quote(encodedPassword));
+                            regex.append('|');
                         }
-                        nbMaskedPasswords++;
+                    } catch (UnsupportedEncodingException e) {
+                        // ignore
                     }
+                    nbMaskedPasswords++;
                 }
             }
 

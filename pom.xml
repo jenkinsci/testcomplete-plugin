@@ -3,14 +3,13 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>3.16</version>
+    <version>4.55</version>
   </parent>
 
   <properties>
-    <jenkins.version>2.121.1</jenkins.version>
-    <java.level>8</java.level>
+    <jenkins.version>2.361.4</jenkins.version>
+    <java.level>17</java.level>
     <findbugs.failOnError>false</findbugs.failOnError>
-    <hpi-plugin.version>2.6</hpi-plugin.version>
   </properties>
 
   <artifactId>TestComplete</artifactId>
@@ -38,33 +37,40 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>junit</artifactId>
-      <version>1159.v0b_396e1e07dd</version>
     </dependency>
 
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <version>2.6.1.1</version>
     </dependency>
 
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>plain-credentials</artifactId>
-      <version>1.5
-      </version>
     </dependency>
 
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>structs</artifactId>
-      <version>1.7</version>
     </dependency>
   </dependencies>
 
+  <dependencyManagement>
+      <dependencies>
+          <dependency>
+              <groupId>io.jenkins.tools.bom</groupId>
+              <artifactId>bom-2.361.x</artifactId>
+              <version>1841.v7b_22c5218e1a</version>
+              <scope>import</scope>
+              <type>pom</type>
+          </dependency>
+      </dependencies>
+  </dependencyManagement>
+
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/testcomplete-plugin.git</connection>
+    <connection>scm:git:https://github.com/jenkinsci/testcomplete-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/testcomplete-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/testcomplete-plugin</url>
+    <url>https://github.com/jenkinsci/testcomplete-plugin</url>
     <tag>HEAD</tag>
   </scm>
 
