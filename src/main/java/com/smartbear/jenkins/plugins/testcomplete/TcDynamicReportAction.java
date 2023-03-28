@@ -150,9 +150,7 @@ public class TcDynamicReportAction implements Action{
 
                 inputStream = archive.getInputStream(targetEntry);
                 rsp.serveFile(req, inputStream, targetEntry.getTime(), 0, targetEntry.getSize(), targetEntry.getName());
-            } catch (RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
+            } catch (ServletException | IOException e) {
                 rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             } finally {
                 if (inputStream != null) {

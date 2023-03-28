@@ -60,6 +60,8 @@ public class Utils {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
 
+                private static final long serialVersionUID = -6109926297806624006L;
+
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
                     // Stub
@@ -83,6 +85,8 @@ public class Utils {
     static boolean IsLaunchedAsSystemUser(VirtualChannel channel, final TaskListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
+
+                private static final long serialVersionUID = -7887444820720775808L;
 
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
@@ -117,6 +121,8 @@ public class Utils {
         try {
             return channel.call(new Callable<Long, Exception>() {
 
+                private static final long serialVersionUID = -8337586169108934130L;
+
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
                     // Stub
@@ -136,6 +142,8 @@ public class Utils {
     static int getTimezoneOffset(VirtualChannel channel, TaskListener listener) {
         try {
             return channel.call(new Callable<Integer, Exception>() {
+
+                 private static final long serialVersionUID = 1585057738074873637L;
 
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {

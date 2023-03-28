@@ -35,6 +35,8 @@ import java.util.Optional;
  */
 public class TcInstallation implements Serializable{
 
+     private static final long serialVersionUID = 7428706876729297862L;
+
     public enum LaunchType {
         lcSuite,
         lcProject,

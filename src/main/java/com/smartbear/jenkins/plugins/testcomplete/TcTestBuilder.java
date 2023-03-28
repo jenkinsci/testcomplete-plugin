@@ -209,25 +209,33 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     private static class CBTException extends Exception {
-        CBTException(String message) {
+		private static final long serialVersionUID = -5672210868520813528L;
+
+		CBTException(String message) {
             super(message);
         }
     }
 
     private static class TagsException extends Exception {
-        TagsException(String message) {
+		private static final long serialVersionUID = -3200617630057936085L;
+
+		TagsException(String message) {
             super(message);
         }
     }
 
     private static class InvalidConfigurationException extends Exception {
-        InvalidConfigurationException(String message) {
+		private static final long serialVersionUID = -8671942212072413651L;
+
+		InvalidConfigurationException(String message) {
             super(message);
         }
     }
 
     private static class CredentialsNotFoundException extends Exception {
-        CredentialsNotFoundException(String message) {
+		private static final long serialVersionUID = 5269265422495501813L;
+
+		CredentialsNotFoundException(String message) {
             super(message);
         }
     }
@@ -509,14 +517,14 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveExitCodeFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
 
                 try {
-                    String exiCodeString = Optional.ofNullable(br.readLine()).orElse("").trim();
+                    String exiCodeString = Optional.ofNullable(br.readLine())
+                            .orElseThrow(() -> new NumberFormatException())
+                            .trim();
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeRead(), exiCodeString);
                     }
                     fixedCode = Integer.parseInt(exiCodeString);
-                } catch (RuntimeException e) {
-                    throw e;
-                } catch (Exception e) {
+                } catch (IOException  | NumberFormatException e) {
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeReadFailed());
                     }
