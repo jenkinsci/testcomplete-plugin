@@ -3,13 +3,11 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.55</version>
+    <version>4.59</version>
   </parent>
 
   <properties>
     <jenkins.version>2.361.4</jenkins.version>
-    <java.level>17</java.level>
-    <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
 
   <artifactId>TestComplete</artifactId>
