@@ -661,8 +661,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         boolean isJNLPSlave = Optional.ofNullable(filePath)
             .map(fpath -> fpath.toComputer())
             .map(comp -> !comp.isLaunchSupported())
-            .orElse(false) && !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
-
+            .orElseGet(() -> false) && !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
         
 
         boolean needToUseService = useTCService;
@@ -720,7 +719,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 , workspace.getLogId()
                 , testDisplayName
                 , node.getDisplayName()))
-            .orElse(null);
+            .orElseGet(() -> null);
 
         if(tcReportAction == null)
         {
@@ -1057,7 +1056,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         try {
             if (workspace.getSlaveErrorFilePath().exists()) {
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveErrorFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
-                String errorString = Optional.ofNullable(br.readLine()).orElse("").trim();
+                String errorString = Optional.ofNullable(br.readLine()).orElseGet(() -> "").trim();
                 TcLog.warning(listener, Messages.TcTestBuilder_ErrorMessage(), errorString);
                 testResult.setError(errorString);
             }

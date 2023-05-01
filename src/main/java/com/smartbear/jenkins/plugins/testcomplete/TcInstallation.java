@@ -80,7 +80,7 @@ public class TcInstallation implements Serializable{
             .map(filepath -> filepath.getParent())
             .map(parent -> parent.getRemote())
             .map(remote -> remote + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME)
-            .orElse("");
+            .orElseGet( () -> "");
     }
 
     public ExecutorType getType() {
