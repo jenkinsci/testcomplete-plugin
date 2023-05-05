@@ -37,7 +37,8 @@ import java.util.Date;
 @ExportedBean
 public class TcLogInfo implements Serializable {
 
-    private final long startTime;
+ 	private static final long serialVersionUID = 1758311907560159547L;
+	private final long startTime;
     private final long stopTime;
     private final long testDuration;
 

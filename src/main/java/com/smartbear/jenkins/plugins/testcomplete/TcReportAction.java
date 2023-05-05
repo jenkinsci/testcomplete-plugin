@@ -40,7 +40,9 @@ import java.io.Serializable;
 @ExportedBean
 public class TcReportAction implements Action, Serializable {
 
-    private final Run<?, ?> build;
+    private static final long serialVersionUID = 7225479325486123L;
+    
+    private transient final Run<?, ?> build;
 
     private final String id;
 

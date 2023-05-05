@@ -123,17 +123,28 @@ public class ScreenResolution {
     }
 
     @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + width;
+        result = prime * result + height;
+        return result;
+    }
+
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
+        if (this == obj)
             return true;
-        }
-
-        if (!(obj instanceof ScreenResolution)) {
+        if (obj == null)
             return false;
-        }
-
-        ScreenResolution another = (ScreenResolution) obj;
-        return height == another.height && width == another.width;
+        if (getClass() != obj.getClass())
+            return false;
+        ScreenResolution other = (ScreenResolution) obj;
+        if (width != other.width)
+            return false;
+        if (height != other.height)
+            return false;
+        return true;
     }
 
 }

@@ -34,6 +34,8 @@ import org.w3c.dom.*;
 
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.stream.*;
+
+import java.io.IOException;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.zip.ZipFile;
@@ -126,8 +128,10 @@ public class LogParser implements ILogParser {
             logInfo.setXML(xml);
 
             return logInfo;
-        }
-        catch (Exception e) {
+        } catch ( IOException 
+                | FactoryConfigurationError
+                | XMLStreamException e) {
+
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
             return null;
         }

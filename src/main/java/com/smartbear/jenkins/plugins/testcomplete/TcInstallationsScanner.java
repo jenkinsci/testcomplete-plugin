@@ -47,7 +47,7 @@ class TcInstallationsScanner implements Serializable {
     private static final int REGISTRY_KEY_WOW64_32KEY = 0x0200;
     private static final int REGISTRY_KEY_READ = 0x20019;
 
-    private final VirtualChannel channel;
+    private transient final VirtualChannel channel;
     private final TaskListener listener;
 
     TcInstallationsScanner(VirtualChannel channel, TaskListener listener) {
@@ -55,7 +55,7 @@ class TcInstallationsScanner implements Serializable {
         this.listener = listener;
     }
 
-    private static class ScannerCallable implements Callable<List<TcInstallation>, Exception>, Serializable {
+    private static class ScannerCallable implements Callable<List<TcInstallation>, Exception> {
 
         private static final long serialVersionUID = 1L;
         private static final String registryKey = "SOFTWARE\\SmartBear\\";

@@ -150,8 +150,7 @@ public class TcDynamicReportAction implements Action{
 
                 inputStream = archive.getInputStream(targetEntry);
                 rsp.serveFile(req, inputStream, targetEntry.getTime(), 0, targetEntry.getSize(), targetEntry.getName());
-            }
-            catch (Exception e) {
+            } catch (ServletException | IOException e) {
                 rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             } finally {
                 if (inputStream != null) {
@@ -183,7 +182,14 @@ public class TcDynamicReportAction implements Action{
             String oldDirectoryName = path.getName();
 
             try {
-                try (BufferedReader br = new BufferedReader(new FileReader(new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)))) {
+                try (BufferedReader br = new BufferedReader(
+                        new InputStreamReader(
+                            new FileInputStream(
+                                new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)
+                                ), "UTF-8"
+                            )
+                        )
+                    ) {
                     String line;
                     while ((line = br.readLine()) != null) {
                         String parts[] = line.split("( )");

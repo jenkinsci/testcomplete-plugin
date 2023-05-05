@@ -40,6 +40,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.Semaphore;
 
 public class Utils {
@@ -58,6 +59,8 @@ public class Utils {
     static boolean isWindows(VirtualChannel channel, TaskListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
+
+                private static final long serialVersionUID = -6109926297806624006L;
 
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
@@ -82,6 +85,8 @@ public class Utils {
     static boolean IsLaunchedAsSystemUser(VirtualChannel channel, final TaskListener listener) {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
+
+                private static final long serialVersionUID = -7887444820720775808L;
 
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
@@ -116,6 +121,8 @@ public class Utils {
         try {
             return channel.call(new Callable<Long, Exception>() {
 
+                private static final long serialVersionUID = -8337586169108934130L;
+
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
                     // Stub
@@ -135,6 +142,8 @@ public class Utils {
     static int getTimezoneOffset(VirtualChannel channel, TaskListener listener) {
         try {
             return channel.call(new Callable<Integer, Exception>() {
+
+                 private static final long serialVersionUID = 1585057738074873637L;
 
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
@@ -170,13 +179,13 @@ public class Utils {
     }
 
     static String encryptPassword(String password) throws Exception {
-        byte[] keyRawData = new Base64().decode(PUBLIC_KEY);
+        byte[] keyRawData = Base64.getDecoder().decode(PUBLIC_KEY);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         KeySpec ks = new X509EncodedKeySpec(keyRawData);
         RSAPublicKey publicKey = (RSAPublicKey) keyFactory.generatePublic(ks);
         byte[] encryptedData = encrypt(password, publicKey);
 
-        return new Base64().encode(encryptedData);
+        return Base64.getEncoder().encodeToString(encryptedData);
     }
 
     private static byte[] encrypt(String data, Key publicKey) throws Exception {
@@ -224,11 +233,12 @@ public class Utils {
     }
 
     public static String getPluginVersionOrNull() {
-        if (Jenkins.getInstanceOrNull() == null) {
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
+        if (jenkins == null) {
             return null;
         }
 
-        for (PluginWrapper plugin : Jenkins.getInstanceOrNull().pluginManager.getPlugins()) {
+        for (PluginWrapper plugin : jenkins.pluginManager.getPlugins()) {
             String name = plugin.getShortName();
             if (name != null) {
                 if (name.equals(Constants.PLUGIN_NAME)) {
@@ -247,10 +257,10 @@ public class Utils {
         public void lock(Computer computer, TaskListener listener) throws InterruptedException {
             Semaphore semaphore = null;
             synchronized (this) {
-                for (WeakReference<Computer> computerRef : computerLocks.keySet()) {
-                    Computer actualComputer = computerRef.get();
+                for (Entry<WeakReference<Computer>, Semaphore> computerRef : computerLocks.entrySet()) {
+                    Computer actualComputer = computerRef.getKey().get();
                     if (actualComputer != null && actualComputer == computer) {
-                        semaphore = computerLocks.get(computerRef);
+                        semaphore = computerRef.getValue();
                     }
                 }
 
@@ -269,10 +279,10 @@ public class Utils {
         public void release(Computer computer) throws InterruptedException {
             Semaphore semaphore = null;
             synchronized (this) {
-                for (WeakReference<Computer> computerRef : computerLocks.keySet()) {
-                    Computer actualComputer = computerRef.get();
+                for (Entry<WeakReference<Computer>,Semaphore> computerRef : computerLocks.entrySet()) {
+                    Computer actualComputer = computerRef.getKey().get();
                     if (actualComputer != null && actualComputer == computer) {
-                        semaphore = computerLocks.get(computerRef);
+                        semaphore = computerRef.getValue();
                     }
                 }
             }
@@ -286,12 +296,12 @@ public class Utils {
             synchronized (this) {
                 List<WeakReference<Computer>> toRemove = new ArrayList<>();
 
-                for (WeakReference<Computer> computerRef : computerLocks.keySet()) {
-                    Computer actualComputer = computerRef.get();
+                for (Entry<WeakReference<Computer>, Semaphore> computerRef : computerLocks.entrySet()) {
+                    Computer actualComputer = computerRef.getKey().get();
                     if (actualComputer != null && actualComputer == computer) {
-                        semaphore = computerLocks.get(computerRef);
+                        semaphore = computerRef.getValue();
                         if (semaphore.availablePermits() > 0) {
-                            toRemove.add(computerRef);
+                            toRemove.add(computerRef.getKey());
                         }
                     }
                 }
