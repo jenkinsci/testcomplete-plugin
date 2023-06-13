@@ -81,6 +81,12 @@ If you have any questions or need assistance with setting up the plugin and conf
 
 ## *Version History*
 
+#### Version 2.9.2
+-   Fix Stored XSS vulnerability (SECURITY-2892 / CVE-2023-33002)
+
+#### Version 2.9.1
+-   Fix XXE vulnerability (SECURITY-2741 / CVE-2023-24443)
+
 #### Version 2.6.2
 -   Support for the TestExecute Lite utility has been removed. Now you can control parallel test runs directly from TestComplete projects.
 
