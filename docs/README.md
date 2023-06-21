@@ -80,6 +80,8 @@ You can find complete information on using the plugin in [**TestComplete documen
 If you have any questions or need assistance with setting up the plugin and configuring the step’s properties, please [contact the SmartBear Support Team](http://support.smartbear.com/message/?prod=TestComplete).
 
 ## *Version History*
+#### Version 2.9,1
+-   Fix security issue SECURITY-2741 / CVE-2023-24443 where TestComplete support Plugin 2.8.1 and earlier does not configure its XML parser to prevent XML external entity (XXE) attacks.
 
 #### Version 2.6.2
 -   Support for the TestExecute Lite utility has been removed. Now you can control parallel test runs directly from TestComplete projects.
