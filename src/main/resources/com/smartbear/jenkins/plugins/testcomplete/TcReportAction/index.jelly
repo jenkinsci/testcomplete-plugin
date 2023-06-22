@@ -29,7 +29,9 @@
             </j:if>
 
             <j:if test="${!it.hasInfo()}">
-                <span style="color:red;">${it.getNoInfoMessage("../../../console")}</span>
+                <span style="color:red;">
+                    <j:out value='${it.getNoInfoMessage("../../../console")}' />
+                </span>
                 <br/><br/>
             </j:if>
 
