@@ -754,10 +754,16 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 processStarter = launcher.launch().cmds(args).envs(run.getEnvironment(listener));
             }
 
-            processStarter.readStdout();
+            if (useSessionCreator)
+            {
+                processStarter.readStdout();
+            }
 
             process = processStarter.start();
-            InputStream processStdout = process.getStdout();
+            InputStream processStdout = null;
+            if (useSessionCreator) {
+                processStdout = process.getStdout();
+            }
 
             if (realTimeout == -1) {
                 exitCode = process.join();
@@ -765,10 +771,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 exitCode = process.joinWithTimeout(realTimeout, TimeUnit.SECONDS, listener);
             }
 
-            if (DEBUG && (processStdout != null)) {
-                String processOutput = IOUtils.toString(processStdout, "UTF-8");
-                if ((processOutput != null) && (!processOutput.isEmpty())) {
-                    TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExecutorOutput() + "\n" + processOutput);
+            if (useSessionCreator)
+            {
+                if (DEBUG && (processStdout != null))
+                {
+                    String processOutput = IOUtils.toString(processStdout);
+                    if ((processOutput != null) && (!processOutput.isEmpty()))
+                    {
+                        TcLog.warning(listener, Messages.TcTestBuilder_Debug_ExecutorOutput() + "\n" + processOutput);
+                    }
                 }
             }
 
