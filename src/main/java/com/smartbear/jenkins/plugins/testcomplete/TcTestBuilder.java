@@ -87,6 +87,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private static final String VERSION_ARG = "/JenkinsTCPluginVersion:";
     private static final String TAGS_ARG = "/tags:";
     private static final String ACCESS_KEY_ARG = "/accesskey:";
+    private static final String ON_PREMISE_SERVER_URL_ARG = "/onPremiseURL:";
 
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
     private static final String KEEP_LOGS_FLAG_NAME = "TESTCOMPLETE_PLUGIN_KEEP_LOGS";
@@ -185,6 +186,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     private String actionOnWarnings;
     private String actionOnErrors;
+    private String onPremiseServerUrl;
     private String commandLineArguments;
 
     private boolean useTimeout;
@@ -257,6 +259,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         this.executorVersion = Constants.ANY_CONSTANT;
         this.actionOnWarnings = BuildStepAction.NONE.toString();
         this.actionOnErrors = BuildStepAction.MAKE_UNSTABLE.toString();
+        this.onPremiseServerUrl = "";
         this.commandLineArguments = "";
 
         this.useTimeout = false;
@@ -389,6 +392,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     public String getActionOnErrors() {
         return actionOnErrors;
+    }
+
+    @DataBoundSetter
+    public void setOnPremiseServerUrl(String onPremiseServerUrl) {
+        this.onPremiseServerUrl = onPremiseServerUrl;
+    }
+
+    public String getOnPremiseServerUrl() {
+        return onPremiseServerUrl;
     }
 
     @DataBoundSetter
@@ -1323,6 +1335,9 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         } else if (TcInstallation.LaunchType.lcItem.name().equals(launchType)) {
             addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
             addArg(args, TEST_ARG + env.expand(getTest()), useNewCommandLineFormat);
+        }
+        if (getOnPremiseServerUrl() != null && !getOnPremiseServerUrl().trim().isEmpty()){
+            addArg(args, ON_PREMISE_SERVER_URL_ARG + env.expand(getOnPremiseServerUrl()), useNewCommandLineFormat);
         }
 
         if (installation.getType() == TcInstallation.ExecutorType.TE) {
