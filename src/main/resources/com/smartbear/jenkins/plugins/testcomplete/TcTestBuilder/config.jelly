@@ -81,6 +81,9 @@
         <f:entry title="${%ActionOnErrorsTitle}" field="actionOnErrors" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/actionOnErrors.html">
           <f:select default="MAKE_UNSTABLE"/>
         </f:entry>
+        <f:entry title="${%OnPremiseServerUrlTitle}" field="onPremiseServerUrl" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/onPremiseServerUrl.html">
+          <f:textbox />
+        </f:entry>
         <f:entry title="${%CommandLineArgumentsTitle}" field="commandLineArguments" help="/plugin/${descriptor.pluginName}/help/TcTestBuilder/commandLineArguments.html">
           <f:textbox />
         </f:entry>
