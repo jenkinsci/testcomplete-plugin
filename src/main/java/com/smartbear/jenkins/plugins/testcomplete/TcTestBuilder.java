@@ -1369,6 +1369,10 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         if (DEBUG) {
+            TcLog.debug(listener, Messages.TcTestBuilder_Debug_OnPremiseServerUrl(), onPremiseServerUrl);
+        }
+
+        if (DEBUG) {
             TcLog.debug(listener, Messages.TcTestBuilder_Debug_AdditionalCommandLineArguments(), commandLineArguments);
         }
 
