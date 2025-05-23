@@ -34,9 +34,6 @@ import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import static com.smartbear.jenkins.plugins.testcomplete.Constants.LEGACY_IDS_FILE_NAME;
-import static com.smartbear.jenkins.plugins.testcomplete.Constants.REPORTS_DIRECTORY_NAME;
-
 /**
  * @author Igor Filin
  */
@@ -99,7 +96,7 @@ public class TcDynamicReportAction implements Action{
         if (basePathCache != null) {
             basePath = basePathCache;
         } else {
-            basePath = recalculateBasePath(baseReportsPath);
+            basePath = baseReportsPath;
             basePathCache = basePath;
         }
 
@@ -171,43 +168,4 @@ public class TcDynamicReportAction implements Action{
         }
         return targetEntry;
     }
-
-    // https://wiki.jenkins.io/display/JENKINS/JENKINS-24380+Migration
-    private String recalculateBasePath(String basePath) {
-        File path = new File(basePath);
-
-        if (!path.exists()) {
-            path = path.getParentFile();
-
-            String oldDirectoryName = path.getName();
-
-            try {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(
-                            new FileInputStream(
-                                new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)
-                                ), "UTF-8"
-                            )
-                        )
-                    ) {
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        String parts[] = line.split("( )");
-                        if ((parts.length == 2) && (parts[0].equals(oldDirectoryName))) {
-                            File newPath = new File(path.getParentFile(), parts[1] + File.separatorChar + REPORTS_DIRECTORY_NAME);
-                            if (newPath.exists()) {
-                                return newPath.getAbsolutePath();
-                            }
-                            break;
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                // Do nothing
-            }
-        }
-
-        return basePath;
-    }
-
 }
