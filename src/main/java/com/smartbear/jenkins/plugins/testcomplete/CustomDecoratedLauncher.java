@@ -4,7 +4,7 @@ import hudson.Launcher;
 import hudson.Proc;
 import org.apache.commons.lang.StringUtils;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;

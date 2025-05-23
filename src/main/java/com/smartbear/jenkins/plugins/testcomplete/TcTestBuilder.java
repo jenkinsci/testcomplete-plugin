@@ -54,7 +54,7 @@ import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.*;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.ArrayList;

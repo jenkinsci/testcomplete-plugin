@@ -27,9 +27,11 @@ package com.smartbear.jenkins.plugins.testcomplete;
 import hudson.model.Action;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -65,7 +67,7 @@ public class TcDynamicReportAction implements Action{
     }
 
     @SuppressWarnings("unused")
-    public void doDynamic(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+    public void doDynamic(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
 
         if (!req.getMethod().equals("GET")) {
             rsp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);

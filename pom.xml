@@ -3,11 +3,13 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.65</version>
+    <version>5.17</version>
   </parent>
 
   <properties>
-    <jenkins.version>2.361.4</jenkins.version>
+    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+    <jenkins.baseline>2.479</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
   </properties>
 
   <artifactId>TestComplete</artifactId>
@@ -46,19 +48,14 @@
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>plain-credentials</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>structs</artifactId>
-    </dependency>
   </dependencies>
 
   <dependencyManagement>
       <dependencies>
           <dependency>
               <groupId>io.jenkins.tools.bom</groupId>
-              <artifactId>bom-2.361.x</artifactId>
-              <version>2102.v854b_fec19c92</version>
+              <artifactId>bom-${jenkins.baseline}.x</artifactId>
+              <version>4770.v9a_2b_7a_9d8b_7f</version>
               <scope>import</scope>
               <type>pom</type>
           </dependency>
