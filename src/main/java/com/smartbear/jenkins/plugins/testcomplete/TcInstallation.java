@@ -27,15 +27,17 @@ package com.smartbear.jenkins.plugins.testcomplete;
 import hudson.FilePath;
 
 import java.io.File;
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Optional;
 
 /**
  * @author Igor Filin
  */
-public class TcInstallation implements Serializable{
+public class TcInstallation implements Serializable {
 
-     private static final long serialVersionUID = 7428706876729297862L;
+    @Serial
+    private static final long serialVersionUID = 7428706876729297862L;
 
     public enum LaunchType {
         lcSuite,
@@ -76,11 +78,11 @@ public class TcInstallation implements Serializable{
     }
 
     public String getSessionCreatorPath() {
-        return Optional.ofNullable(new FilePath(new File(executorPath)))
-            .map(filepath -> filepath.getParent())
-            .map(parent -> parent.getRemote())
-            .map(remote -> remote + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME)
-            .orElseGet( () -> "");
+        return Optional.of(new FilePath(new File(executorPath)))
+                .map(FilePath::getParent)
+                .map(FilePath::getRemote)
+                .map(remote -> remote + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME)
+                .orElse("");
     }
 
     public ExecutorType getType() {
