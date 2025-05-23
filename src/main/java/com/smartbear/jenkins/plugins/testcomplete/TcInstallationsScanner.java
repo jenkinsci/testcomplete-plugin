@@ -29,6 +29,7 @@ import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
 import hudson.util.jna.JnaException;
 import hudson.util.jna.RegistryKey;
+import java.io.Serial;
 import org.jenkinsci.remoting.RoleChecker;
 
 import java.io.File;
@@ -43,6 +44,7 @@ import java.util.List;
  */
 class TcInstallationsScanner implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1L;
     private static final int REGISTRY_KEY_WOW64_32KEY = 0x0200;
     private static final int REGISTRY_KEY_READ = 0x20019;
@@ -57,6 +59,7 @@ class TcInstallationsScanner implements Serializable {
 
     private static class ScannerCallable implements Callable<List<TcInstallation>, Exception> {
 
+        @Serial
         private static final long serialVersionUID = 1L;
         private static final String registryKey = "SOFTWARE\\SmartBear\\";
 
@@ -83,7 +86,7 @@ class TcInstallationsScanner implements Serializable {
                 executorKey = RegistryKey.LOCAL_MACHINE.open(key, REGISTRY_KEY_READ | REGISTRY_KEY_WOW64_32KEY);
                 Collection<String> installKeys = executorKey.getSubKeys();
 
-                if (installKeys != null && installKeys.size() > 0) {
+                if (installKeys != null && !installKeys.isEmpty()) {
                     for (String versionKey : installKeys) {
                         if (!versionKey.matches("^[0-9]{1,3}([.][0-9]{1,5})+$")) {
                             continue;

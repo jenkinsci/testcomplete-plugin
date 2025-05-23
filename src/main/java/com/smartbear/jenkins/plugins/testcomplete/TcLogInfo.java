@@ -24,6 +24,7 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
+import java.io.Serial;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
@@ -37,7 +38,8 @@ import java.util.Date;
 @ExportedBean
 public class TcLogInfo implements Serializable {
 
- 	private static final long serialVersionUID = 1758311907560159547L;
+ 	@Serial
+  private static final long serialVersionUID = 1758311907560159547L;
 	private final long startTime;
     private final long stopTime;
     private final long testDuration;

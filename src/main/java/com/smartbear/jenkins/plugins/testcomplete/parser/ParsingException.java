@@ -25,12 +25,14 @@
 package com.smartbear.jenkins.plugins.testcomplete.parser;
 
 import java.io.IOException;
+import java.io.Serial;
 
 /**
  * @author Igor Filin
  */
 public class ParsingException extends IOException {
-	private static final long serialVersionUID = 5698589934620367756L;
+	@Serial
+  private static final long serialVersionUID = 5698589934620367756L;
 
     public ParsingException(String message) {
         super(message);

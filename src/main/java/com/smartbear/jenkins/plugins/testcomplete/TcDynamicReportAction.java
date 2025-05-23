@@ -25,8 +25,7 @@
 package com.smartbear.jenkins.plugins.testcomplete;
 
 import hudson.model.Action;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import java.nio.charset.StandardCharsets;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
 
@@ -44,7 +43,7 @@ import static com.smartbear.jenkins.plugins.testcomplete.Constants.REPORTS_DIREC
  */
 public class TcDynamicReportAction implements Action{
 
-    private final static String DOWNLOAD_FILE_NAME = "Test";
+    private static final String DOWNLOAD_FILE_NAME = "Test";
 
     private final String baseReportsPath;
     private transient String basePathCache = null;
@@ -76,7 +75,7 @@ public class TcDynamicReportAction implements Action{
 
         String path = req.getRestOfPath();
 
-        if (path.length() == 0 || path.contains("..")) {
+        if (path.isEmpty() || path.contains("..")) {
             rsp.sendError(HttpServletResponse.SC_BAD_REQUEST);
             return;
         }
@@ -113,18 +112,13 @@ public class TcDynamicReportAction implements Action{
                 return;
             }
 
-            FileInputStream fis = null;
-
-            try {
-                fis = new FileInputStream(file);
-                rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + ext + "\"");
-                rsp.serveFile(req, fis, file.lastModified(), 0, file.length(), "mime-type:application/force-download");
-            } catch (IOException e) {
-                rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            } finally {
-                if (fis != null)
-                    fis.close();
-            }
+          try (FileInputStream fis = new FileInputStream(file)) {
+            rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + ext + "\"");
+            rsp.serveFile(req, fis, file.lastModified(), 0, file.length(),
+                "mime-type:application/force-download");
+          } catch (IOException e) {
+            rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+          }
         } else {
             String archiveName = parts[0] + Constants.HTMLX_FILE_EXTENSION;
             File logFile = new File(basePath, archiveName);
@@ -140,27 +134,19 @@ public class TcDynamicReportAction implements Action{
                 entryName = path.substring(parts[0].length() + 1);
             }
 
-            ZipFile archive = null;
-            InputStream inputStream = null;
-            try {
-                archive = new ZipFile(logFile);
+            try (ZipFile archive = new ZipFile(logFile)) {
                 ZipEntry targetEntry = searchEntry(archive, entryName);
                 if (targetEntry == null) {
                     rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
                     return;
                 }
 
-                inputStream = archive.getInputStream(targetEntry);
-                rsp.serveFile(req, inputStream, targetEntry.getTime(), 0, targetEntry.getSize(), targetEntry.getName());
+                try (InputStream inputStream = archive.getInputStream(targetEntry)){
+                    rsp.serveFile(req, inputStream, targetEntry.getTime(), 0, targetEntry.getSize(),
+                        targetEntry.getName());
+                }
             } catch (ServletException | IOException e) {
                 rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            } finally {
-                if (inputStream != null) {
-                    inputStream.close();
-                }
-                if (archive != null) {
-                    archive.close();
-                }
             }
         }
     }
@@ -188,13 +174,13 @@ public class TcDynamicReportAction implements Action{
                         new InputStreamReader(
                             new FileInputStream(
                                 new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)
-                                ), "UTF-8"
+                                ), StandardCharsets.UTF_8
                             )
                         )
                     ) {
                     String line;
                     while ((line = br.readLine()) != null) {
-                        String parts[] = line.split("( )");
+                        String[] parts = line.split("( )");
                         if ((parts.length == 2) && (parts[0].equals(oldDirectoryName))) {
                             File newPath = new File(path.getParentFile(), parts[1] + File.separatorChar + REPORTS_DIRECTORY_NAME);
                             if (newPath.exists()) {

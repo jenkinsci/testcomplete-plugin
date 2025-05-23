@@ -64,7 +64,7 @@ class LogNodeUtils {
 
     }
 
-    static public String getTextAttribute(Node node, String name) {
+    public static String getTextAttribute(Node node, String name) {
         if (node == null) {
             return null;
         }
@@ -76,7 +76,7 @@ class LogNodeUtils {
         return null;
     }
 
-    static public String getTextProperty(Node node, String propertyName) {
+    public static String getTextProperty(Node node, String propertyName) {
         if (node == null) {
             return null;
         }
@@ -93,15 +93,15 @@ class LogNodeUtils {
         return null;
     }
 
-    static public List<String> getErrorMessages(Node node) {
+    public static List<String> getErrorMessages(Node node) {
         return getMessages(node, "3");
     }
 
-    static public List<String> getWarningMessages(Node node) {
+    public static List<String> getWarningMessages(Node node) {
         return getMessages(node, "2");
     }
 
-    static public List<String> getMessages(Node node, String status) {
+    public static List<String> getMessages(Node node, String status) {
         List<String> result = new LinkedList<>();
 
         // using TreeMap for sorting messages order
@@ -142,7 +142,7 @@ class LogNodeUtils {
         return result;
     }
 
-    static public Node findRootOwnerNode(NodeList nodes) {
+    public static Node findRootOwnerNode(NodeList nodes) {
         for (int i = 0; i < nodes.getLength(); i++) {
             Node node = nodes.item(i);
             String nodeName = getTextAttribute(node, "name");
@@ -157,17 +157,17 @@ class LogNodeUtils {
     }
 
    
-    static private final String EXTERNAL_GENERAL_ENTITIES = 
+    private static final String EXTERNAL_GENERAL_ENTITIES = 
         "http://xml.org/sax/features/external-general-entities";
 
-    static private final String EXTERNAL_PARAMETER_ENTITIES = 
+    private static final String EXTERNAL_PARAMETER_ENTITIES = 
         "http://xml.org/sax/features/external-parameter-entities";
 
-    static private final String LOAD_EXTERNAL_DTD = 
+    private static final String LOAD_EXTERNAL_DTD = 
         "http://apache.org/xml/features/nonvalidating/load-external-dtd";
 
     // This is added to prevent XXE attack on xml parser
-    static private void secureDocumentBuilderFactory(DocumentBuilderFactory factory) 
+    private static void secureDocumentBuilderFactory(DocumentBuilderFactory factory) 
         throws ParserConfigurationException {
         factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
         factory.setFeature(EXTERNAL_GENERAL_ENTITIES , false);
@@ -178,7 +178,7 @@ class LogNodeUtils {
     }
 
 
-    static public Node getRootDocumentNodeFromArchive(ZipFile archive, String name) {
+    public static Node getRootDocumentNodeFromArchive(ZipFile archive, String name) {
         if (name == null) {
             return null;
         }
@@ -188,48 +188,39 @@ class LogNodeUtils {
             return null;
         }
 
-        InputStream logDataStream = null;
-        try {
-            logDataStream = archive.getInputStream(rootLogDataEntry);
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            secureDocumentBuilderFactory(factory);
-            DocumentBuilder builder = factory.newDocumentBuilder();
+      try (InputStream logDataStream = archive.getInputStream(rootLogDataEntry)) {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        secureDocumentBuilderFactory(factory);
+        DocumentBuilder builder = factory.newDocumentBuilder();
 
-            Document document = builder.parse(logDataStream);
+        Document document = builder.parse(logDataStream);
 
-            Element element = document.getDocumentElement();
-            if (!"1".equals(element.getAttribute("version"))) {
-                return null;
-            }
-
-            NodeList list = element.getChildNodes();
-
-            for (int i = 0; i < list.getLength(); i++) {
-                Node item = list.item(i);
-                NamedNodeMap attributes = item.getAttributes();
-                if (attributes != null && attributes.getNamedItem("name") != null) {
-                    String nodeName = attributes.getNamedItem("name").getNodeValue();
-                    if ("root".equals(nodeName)) {
-                        return item;
-                    }
-                }
-            }
-        } catch (IOException | ParserConfigurationException | SAXException e) {
-            // Do nothing
-        } finally {
-            if (logDataStream != null) {
-                try {
-                    logDataStream.close();
-                } catch (IOException e) {
-                    // Do nothing
-                }
-            }
+        Element element = document.getDocumentElement();
+        if (!"1".equals(element.getAttribute("version"))) {
+          return null;
         }
 
-        return null;
+        NodeList list = element.getChildNodes();
+
+        for (int i = 0; i < list.getLength(); i++) {
+          Node item = list.item(i);
+          NamedNodeMap attributes = item.getAttributes();
+          if (attributes != null && attributes.getNamedItem("name") != null) {
+            String nodeName = attributes.getNamedItem("name").getNodeValue();
+            if ("root".equals(nodeName)) {
+              return item;
+            }
+          }
+        }
+      } catch (IOException | ParserConfigurationException | SAXException e) {
+        // Do nothing
+      }
+      // Do nothing
+
+      return null;
     }
 
-    static public Node findNamedNode(NodeList nodes, String name) {
+    public static Node findNamedNode(NodeList nodes, String name) {
         for (int i = 0; i < nodes.getLength(); i++) {
             Node node = nodes.item(i);
             String nodeName = getTextAttribute(node, "name");
@@ -240,7 +231,7 @@ class LogNodeUtils {
         return null;
     }
 
-    static public Node findNamedNode(Node node, String name) {
+    public static Node findNamedNode(Node node, String name) {
         if (node == null) {
             return null;
         }
@@ -248,7 +239,7 @@ class LogNodeUtils {
         return findNamedNode(node.getChildNodes(), name);
     }
 
-    static public List<String> findChildMessages(Node containerNode, String listName, String prefix) {
+    public static List<String> findChildMessages(Node containerNode, String listName, String prefix) {
         List<String> result = new ArrayList<>();
         Map<Integer, String> map = new HashMap<>();
 
@@ -295,7 +286,7 @@ class LogNodeUtils {
             map.put(index, msg);
         }
 
-        ArrayList<Integer> keys = new ArrayList<Integer>(map.keySet());
+        ArrayList<Integer> keys = new ArrayList<>(map.keySet());
         Collections.sort(keys);
 
         for (Integer key : keys) {
@@ -305,7 +296,7 @@ class LogNodeUtils {
         return result;
     }
 
-    static public List<Node> findChildNodes(Node root, NodeList nodes) {
+    public static List<Node> findChildNodes(Node root, NodeList nodes) {
         List<Node> result = new ArrayList<>();
 
         List<String> childrenKeys = new ArrayList<>();
@@ -334,7 +325,7 @@ class LogNodeUtils {
         return result;
     }
 
-    static public List<Node> findChildNodes(Node parent) {
+    public static List<Node> findChildNodes(Node parent) {
         NodeList children = parent.getChildNodes();
         List<Node> result = new ArrayList<>();
 
@@ -346,14 +337,14 @@ class LogNodeUtils {
         return result;
     }
 
-    static public boolean isProjectItem(ZipFile archive, Node node) {
+    public static boolean isProjectItem(ZipFile archive, Node node) {
         String fileName = getTextProperty(node, "filename");
         Node nodeInfo = getRootDocumentNodeFromArchive(archive, fileName);
         Node logDataRowNode = LogNodeUtils.findNamedNode(nodeInfo, "status");
         return logDataRowNode == null;
     }
 
-    static public List<Node> scanForSubItems(Node root, NodeList nodes) {
+    public static List<Node> scanForSubItems(Node root, NodeList nodes) {
         List<String> childrenKeys = new ArrayList<>();
         Node childNode = findNamedNode(root.getChildNodes(), "children");
         if (childNode != null) {
@@ -382,7 +373,7 @@ class LogNodeUtils {
         return subItems;
     }
 
-    static public boolean isTestItem(ZipFile archive, Node node, NodeList nodes) {
+    public static boolean isTestItem(ZipFile archive, Node node, NodeList nodes) {
         List<Node> subItems = scanForSubItems(node, nodes);
 
         for (Node subItem : subItems) {
@@ -394,7 +385,7 @@ class LogNodeUtils {
         return false;
     }
 
-    static public List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) {
+    public static List<Pair<String, Node>> findChildNodesRecursively(ZipFile archive, Node root, NodeList nodes, String nodeName) {
         List<Node> subItems = scanForSubItems(root, nodes);
         List<Pair<String, Node>> result = new ArrayList<>();
 
@@ -407,7 +398,7 @@ class LogNodeUtils {
             String subNodeName = LogNodeUtils.getTextProperty(node, "name");
             List<Pair<String, Node>> children = findChildNodesRecursively(archive, node, nodes, "".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName);
 
-            if (children != null  && !children.isEmpty()) {
+            if (!children.isEmpty()) {
                 result.addAll(children);
             }
 
@@ -418,7 +409,7 @@ class LogNodeUtils {
         return result;
     }
 
-    static public String startTimeToTimestamp(String startTime) {
+    public static String startTimeToTimestamp(String startTime) {
         long startDate = Utils.safeConvertDate(startTime);
         Calendar cal = new GregorianCalendar();
         cal.setTimeInMillis(startDate);

@@ -235,10 +235,8 @@ public class LogParser2 implements ILogParser {
                 } else if (checkFail(testCaseStatus)) {
                     writer.writeStartElement("failure");
 
-                    List<String> messages = new ArrayList<>();
-
-                    List<String> errors = LogNodeUtils.findChildMessages(testNode, "errors", "error");
-                    messages.addAll(errors);
+                  List<String> errors = LogNodeUtils.findChildMessages(testNode, "errors", "error");
+                  List<String> messages = new ArrayList<>(errors);
 
                     if (context.errorOnWarnings()) {
                         List<String> warnings = LogNodeUtils.findChildMessages(testNode, "warnings", "warning");

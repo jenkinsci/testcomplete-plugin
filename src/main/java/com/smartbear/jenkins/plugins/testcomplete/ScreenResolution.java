@@ -83,7 +83,7 @@ public class ScreenResolution {
     }
 
     public String toString() {
-        return Integer.toString(width) + SEPARATOR + Integer.toString(height);
+        return width + SEPARATOR + height;
     }
 
     static ScreenResolution parseResolution(String resolutionString) {

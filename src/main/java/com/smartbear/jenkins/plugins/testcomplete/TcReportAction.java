@@ -27,6 +27,7 @@ package com.smartbear.jenkins.plugins.testcomplete;
 import hudson.model.Action;
 import hudson.model.Api;
 import hudson.model.Run;
+import java.io.Serial;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
@@ -40,8 +41,9 @@ import java.io.Serializable;
 @ExportedBean
 public class TcReportAction implements Action, Serializable {
 
+    @Serial
     private static final long serialVersionUID = 7225479325486123L;
-    
+
     private transient final Run<?, ?> build;
 
     private final String id;
