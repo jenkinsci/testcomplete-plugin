@@ -235,8 +235,8 @@ public class LogParser2 implements ILogParser {
                 } else if (checkFail(testCaseStatus)) {
                     writer.writeStartElement("failure");
 
-                  List<String> errors = LogNodeUtils.findChildMessages(testNode, "errors", "error");
-                  List<String> messages = new ArrayList<>(errors);
+                    List<String> errors = LogNodeUtils.findChildMessages(testNode, "errors", "error");
+                    List<String> messages = new ArrayList<>(errors);
 
                     if (context.errorOnWarnings()) {
                         List<String> warnings = LogNodeUtils.findChildMessages(testNode, "warnings", "warning");
@@ -292,8 +292,7 @@ public class LogParser2 implements ILogParser {
             logInfo.setXML(xml);
 
             return logInfo;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             StringWriter stringWriter = new StringWriter();
             e.printStackTrace(new PrintWriter(stringWriter));
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), stringWriter.toString());

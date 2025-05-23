@@ -25,13 +25,13 @@
 package com.smartbear.jenkins.plugins.testcomplete;
 
 import hudson.model.Action;
-import java.nio.charset.StandardCharsets;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.kohsuke.stapler.StaplerRequest2;
 import org.kohsuke.stapler.StaplerResponse2;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -41,7 +41,7 @@ import static com.smartbear.jenkins.plugins.testcomplete.Constants.REPORTS_DIREC
 /**
  * @author Igor Filin
  */
-public class TcDynamicReportAction implements Action{
+public class TcDynamicReportAction implements Action {
 
     private static final String DOWNLOAD_FILE_NAME = "Test";
 
@@ -112,13 +112,13 @@ public class TcDynamicReportAction implements Action{
                 return;
             }
 
-          try (FileInputStream fis = new FileInputStream(file)) {
-            rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + ext + "\"");
-            rsp.serveFile(req, fis, file.lastModified(), 0, file.length(),
-                "mime-type:application/force-download");
-          } catch (IOException e) {
-            rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-          }
+            try (FileInputStream fis = new FileInputStream(file)) {
+                rsp.setHeader("Content-Disposition", "filename=\"" + DOWNLOAD_FILE_NAME + ext + "\"");
+                rsp.serveFile(req, fis, file.lastModified(), 0, file.length(),
+                        "mime-type:application/force-download");
+            } catch (IOException e) {
+                rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
         } else {
             String archiveName = parts[0] + Constants.HTMLX_FILE_EXTENSION;
             File logFile = new File(basePath, archiveName);
@@ -141,9 +141,9 @@ public class TcDynamicReportAction implements Action{
                     return;
                 }
 
-                try (InputStream inputStream = archive.getInputStream(targetEntry)){
+                try (InputStream inputStream = archive.getInputStream(targetEntry)) {
                     rsp.serveFile(req, inputStream, targetEntry.getTime(), 0, targetEntry.getSize(),
-                        targetEntry.getName());
+                            targetEntry.getName());
                 }
             } catch (ServletException | IOException e) {
                 rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -172,12 +172,12 @@ public class TcDynamicReportAction implements Action{
             try {
                 try (BufferedReader br = new BufferedReader(
                         new InputStreamReader(
-                            new FileInputStream(
-                                new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)
+                                new FileInputStream(
+                                        new File(path.getParentFile(), LEGACY_IDS_FILE_NAME)
                                 ), StandardCharsets.UTF_8
-                            )
                         )
-                    ) {
+                )
+                ) {
                     String line;
                     while ((line = br.readLine()) != null) {
                         String[] parts = line.split("( )");

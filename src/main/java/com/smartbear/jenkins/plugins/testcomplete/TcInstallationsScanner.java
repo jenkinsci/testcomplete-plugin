@@ -29,10 +29,10 @@ import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
 import hudson.util.jna.JnaException;
 import hudson.util.jna.RegistryKey;
-import java.io.Serial;
 import org.jenkinsci.remoting.RoleChecker;
 
 import java.io.File;
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;

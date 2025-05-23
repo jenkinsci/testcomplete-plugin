@@ -28,6 +28,7 @@ import com.smartbear.jenkins.plugins.testcomplete.Utils;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
+import javax.xml.XMLConstants;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -37,7 +38,6 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import javax.xml.XMLConstants;
 
 /**
  * @author Igor Filin
@@ -156,21 +156,21 @@ class LogNodeUtils {
         return null;
     }
 
-   
-    private static final String EXTERNAL_GENERAL_ENTITIES = 
-        "http://xml.org/sax/features/external-general-entities";
 
-    private static final String EXTERNAL_PARAMETER_ENTITIES = 
-        "http://xml.org/sax/features/external-parameter-entities";
+    private static final String EXTERNAL_GENERAL_ENTITIES =
+            "http://xml.org/sax/features/external-general-entities";
 
-    private static final String LOAD_EXTERNAL_DTD = 
-        "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+    private static final String EXTERNAL_PARAMETER_ENTITIES =
+            "http://xml.org/sax/features/external-parameter-entities";
+
+    private static final String LOAD_EXTERNAL_DTD =
+            "http://apache.org/xml/features/nonvalidating/load-external-dtd";
 
     // This is added to prevent XXE attack on xml parser
-    private static void secureDocumentBuilderFactory(DocumentBuilderFactory factory) 
-        throws ParserConfigurationException {
+    private static void secureDocumentBuilderFactory(DocumentBuilderFactory factory)
+            throws ParserConfigurationException {
         factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        factory.setFeature(EXTERNAL_GENERAL_ENTITIES , false);
+        factory.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
         factory.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
         factory.setFeature(LOAD_EXTERNAL_DTD, false);
         factory.setXIncludeAware(false);
@@ -188,36 +188,36 @@ class LogNodeUtils {
             return null;
         }
 
-      try (InputStream logDataStream = archive.getInputStream(rootLogDataEntry)) {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        secureDocumentBuilderFactory(factory);
-        DocumentBuilder builder = factory.newDocumentBuilder();
+        try (InputStream logDataStream = archive.getInputStream(rootLogDataEntry)) {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            secureDocumentBuilderFactory(factory);
+            DocumentBuilder builder = factory.newDocumentBuilder();
 
-        Document document = builder.parse(logDataStream);
+            Document document = builder.parse(logDataStream);
 
-        Element element = document.getDocumentElement();
-        if (!"1".equals(element.getAttribute("version"))) {
-          return null;
-        }
-
-        NodeList list = element.getChildNodes();
-
-        for (int i = 0; i < list.getLength(); i++) {
-          Node item = list.item(i);
-          NamedNodeMap attributes = item.getAttributes();
-          if (attributes != null && attributes.getNamedItem("name") != null) {
-            String nodeName = attributes.getNamedItem("name").getNodeValue();
-            if ("root".equals(nodeName)) {
-              return item;
+            Element element = document.getDocumentElement();
+            if (!"1".equals(element.getAttribute("version"))) {
+                return null;
             }
-          }
-        }
-      } catch (IOException | ParserConfigurationException | SAXException e) {
-        // Do nothing
-      }
-      // Do nothing
 
-      return null;
+            NodeList list = element.getChildNodes();
+
+            for (int i = 0; i < list.getLength(); i++) {
+                Node item = list.item(i);
+                NamedNodeMap attributes = item.getAttributes();
+                if (attributes != null && attributes.getNamedItem("name") != null) {
+                    String nodeName = attributes.getNamedItem("name").getNodeValue();
+                    if ("root".equals(nodeName)) {
+                        return item;
+                    }
+                }
+            }
+        } catch (IOException | ParserConfigurationException | SAXException e) {
+            // Do nothing
+        }
+        // Do nothing
+
+        return null;
     }
 
     public static Node findNamedNode(NodeList nodes, String name) {
@@ -402,7 +402,7 @@ class LogNodeUtils {
                 result.addAll(children);
             }
 
-            if (isProjectItem(archive, node) && isTestItem(archive, node, nodes)){
+            if (isProjectItem(archive, node) && isTestItem(archive, node, nodes)) {
                 result.add(new Pair<>("".equals(nodeName) ? subNodeName : nodeName + "/" + subNodeName, node));
             }
         }

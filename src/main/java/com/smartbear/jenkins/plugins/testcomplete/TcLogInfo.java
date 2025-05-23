@@ -24,10 +24,10 @@
 
 package com.smartbear.jenkins.plugins.testcomplete;
 
-import java.io.Serial;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.text.DateFormat;
 import java.util.Date;
@@ -38,9 +38,9 @@ import java.util.Date;
 @ExportedBean
 public class TcLogInfo implements Serializable {
 
- 	@Serial
-  private static final long serialVersionUID = 1758311907560159547L;
-	private final long startTime;
+    @Serial
+    private static final long serialVersionUID = 1758311907560159547L;
+    private final long startTime;
     private final long stopTime;
     private final long testDuration;
 
@@ -59,7 +59,7 @@ public class TcLogInfo implements Serializable {
         this.warningCount = warningCount;
     }
 
-    @Exported(name="timestamp")
+    @Exported(name = "timestamp")
     public long getStartTime() {
         return startTime;
     }
@@ -68,7 +68,7 @@ public class TcLogInfo implements Serializable {
         return stopTime;
     }
 
-    @Exported(name="duration")
+    @Exported(name = "duration")
     public long getTestDuration() {
         return testDuration;
     }
@@ -77,12 +77,12 @@ public class TcLogInfo implements Serializable {
         return testCount;
     }
 
-    @Exported(name="errors")
+    @Exported(name = "errors")
     public int getErrorCount() {
         return errorCount;
     }
 
-    @Exported(name="warnings")
+    @Exported(name = "warnings")
     public int getWarningCount() {
         return warningCount;
     }
@@ -105,7 +105,7 @@ public class TcLogInfo implements Serializable {
         long s = timeInSeconds % 60;
         long m = (timeInSeconds / 60) % 60;
         long h = timeInSeconds / (60 * 60);
-        return String.format("%d:%02d:%02d", h,m,s);
+        return String.format("%d:%02d:%02d", h, m, s);
     }
 
     public String getXML() {

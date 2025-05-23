@@ -38,19 +38,19 @@ public class TcLog {
         return "[" + Constants.LOG_PREFIX + "] " + marker + String.format(format, args);
     }
 
-    public static void info(TaskListener listener, String message, Object ... args) {
+    public static void info(TaskListener listener, String message, Object... args) {
         listener.getLogger().println(formatMessage("", message, args));
     }
 
-    public static void warning(TaskListener listener, String message, Object ... args) {
+    public static void warning(TaskListener listener, String message, Object... args) {
         listener.getLogger().println(formatMessage("[WARNING] ", message, args));
     }
 
-    public static void error(TaskListener listener, String message, Object ... args) {
+    public static void error(TaskListener listener, String message, Object... args) {
         listener.getLogger().println(formatMessage("[ERROR] ", message, args));
     }
 
-    public static void debug(TaskListener listener, String message, Object ... args) {
+    public static void debug(TaskListener listener, String message, Object... args) {
         listener.getLogger().println(formatMessage("[DEBUG] ", message, args));
     }
 

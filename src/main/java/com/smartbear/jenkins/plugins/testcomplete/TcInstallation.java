@@ -34,10 +34,10 @@ import java.util.Optional;
 /**
  * @author Igor Filin
  */
-public class TcInstallation implements Serializable{
+public class TcInstallation implements Serializable {
 
-     @Serial
-     private static final long serialVersionUID = 7428706876729297862L;
+    @Serial
+    private static final long serialVersionUID = 7428706876729297862L;
 
     public enum LaunchType {
         lcSuite,
@@ -79,10 +79,10 @@ public class TcInstallation implements Serializable{
 
     public String getSessionCreatorPath() {
         return Optional.of(new FilePath(new File(executorPath)))
-            .map(FilePath::getParent)
-            .map(FilePath::getRemote)
-            .map(remote -> remote + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME)
-            .orElse("");
+                .map(FilePath::getParent)
+                .map(FilePath::getRemote)
+                .map(remote -> remote + "\\" + Constants.TC_SESSION_CREATOR_EXEC_NAME)
+                .orElse("");
     }
 
     public ExecutorType getType() {
