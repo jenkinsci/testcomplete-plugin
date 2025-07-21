@@ -1406,7 +1406,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         @Override
-        public Builder newInstance(StaplerRequest req, @Nonnull JSONObject formData) throws FormException {
+        public Builder newInstance(StaplerRequest2 req, @Nonnull JSONObject formData) throws FormException {
             TcTestBuilder builder = (TcTestBuilder)super.newInstance(req, formData);
             if (!StringUtils.isEmpty(builder.getCredentialsId())) {
                 builder.setUserName("");
