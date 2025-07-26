@@ -33,7 +33,9 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.remoting.RoleChecker;
 
 import javax.crypto.Cipher;
+import java.io.Serial;
 import java.lang.ref.WeakReference;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPublicKey;
@@ -46,10 +48,10 @@ import java.util.concurrent.Semaphore;
 public class Utils {
 
     private static final String PUBLIC_KEY =
-        "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCD43scUktBOFoR10dS80DbFJf" +
-        "MgJoyNGtfxVyQ6DKwmzb1OS+P3E5Y47K3G6fXX8OfhT0WmQ/Aqr61nUXxRgn2cFH" +
-        "Kyc4rjFjfMTkPGkv7rWdIuu+4VR9PYEXar4OyCQEThfhdDSPzfHJ8oiPNqkXe5IY" +
-        "L1xQevURO0+Sapzf7wIDAQAB";
+            "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCD43scUktBOFoR10dS80DbFJf" +
+                    "MgJoyNGtfxVyQ6DKwmzb1OS+P3E5Y47K3G6fXX8OfhT0WmQ/Aqr61nUXxRgn2cFH" +
+                    "Kyc4rjFjfMTkPGkv7rWdIuu+4VR9PYEXar4OyCQEThfhdDSPzfHJ8oiPNqkXe5IY" +
+                    "L1xQevURO0+Sapzf7wIDAQAB";
 
     private static final int ENC_CHUNK_MAX_SIZE = 116;
 
@@ -60,6 +62,7 @@ public class Utils {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
 
+                @Serial
                 private static final long serialVersionUID = -6109926297806624006L;
 
                 @Override
@@ -86,6 +89,7 @@ public class Utils {
         try {
             return channel.call(new Callable<Boolean, Exception>() {
 
+                @Serial
                 private static final long serialVersionUID = -7887444820720775808L;
 
                 @Override
@@ -121,6 +125,7 @@ public class Utils {
         try {
             return channel.call(new Callable<Long, Exception>() {
 
+                @Serial
                 private static final long serialVersionUID = -8337586169108934130L;
 
                 @Override
@@ -143,7 +148,8 @@ public class Utils {
         try {
             return channel.call(new Callable<Integer, Exception>() {
 
-                 private static final long serialVersionUID = 1585057738074873637L;
+                @Serial
+                private static final long serialVersionUID = 1585057738074873637L;
 
                 @Override
                 public void checkRoles(RoleChecker roleChecker) throws SecurityException {
@@ -173,8 +179,7 @@ public class Utils {
         return OLEDateToMillis(dateToConvert);
     }
 
-    private static long OLEDateToMillis(double dSerialDate)
-    {
+    private static long OLEDateToMillis(double dSerialDate) {
         return (long) ((dSerialDate - 25569) * 24 * 3600 * 1000);
     }
 
@@ -193,7 +198,7 @@ public class Utils {
 
         Cipher rsa = Cipher.getInstance("RSA");
         rsa.init(Cipher.ENCRYPT_MODE, publicKey);
-        byte dataRaw[] = data.getBytes("UTF-16LE");
+        byte[] dataRaw = data.getBytes(StandardCharsets.UTF_16LE);
 
         int chunksCount = dataRaw.length / ENC_CHUNK_MAX_SIZE +
                 ((dataRaw.length % ENC_CHUNK_MAX_SIZE) > 0 ? 1 : 0);
@@ -208,14 +213,13 @@ public class Utils {
 
         int totalLength = 0;
 
-        for (int i = 0; i < resultData.size(); i++) {
-            totalLength += resultData.get(i).length;
+        for (byte[] resultDatum : resultData) {
+            totalLength += resultDatum.length;
         }
 
         byte[] result = new byte[totalLength];
         int position = 0;
-        for (int i = 0; i < resultData.size(); i++) {
-            byte[] current = resultData.get(i);
+        for (byte[] current : resultData) {
             System.arraycopy(current, 0, result, position, current.length);
             position += current.length;
         }
@@ -279,7 +283,7 @@ public class Utils {
         public void release(Computer computer) throws InterruptedException {
             Semaphore semaphore = null;
             synchronized (this) {
-                for (Entry<WeakReference<Computer>,Semaphore> computerRef : computerLocks.entrySet()) {
+                for (Entry<WeakReference<Computer>, Semaphore> computerRef : computerLocks.entrySet()) {
                     Computer actualComputer = computerRef.getKey().get();
                     if (actualComputer != null && actualComputer == computer) {
                         semaphore = computerRef.getValue();

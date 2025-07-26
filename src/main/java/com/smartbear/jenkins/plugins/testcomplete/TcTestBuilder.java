@@ -45,6 +45,7 @@ import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import jakarta.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
@@ -54,15 +55,10 @@ import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.*;
 
-import javax.annotation.Nonnull;
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -92,8 +88,9 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     private static final String DEBUG_FLAG_NAME = "TESTCOMPLETE_PLUGIN_DEBUG";
     private static final String KEEP_LOGS_FLAG_NAME = "TESTCOMPLETE_PLUGIN_KEEP_LOGS";
 
+    @Serial
     private static final long serialVersionUID = 5647386534856348764L;
-    
+
     public static class LaunchConfig {
 
         private String launchType;
@@ -211,33 +208,37 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     private static class CBTException extends Exception {
-		private static final long serialVersionUID = -5672210868520813528L;
+        @Serial
+        private static final long serialVersionUID = -5672210868520813528L;
 
-		CBTException(String message) {
+        CBTException(String message) {
             super(message);
         }
     }
 
     private static class TagsException extends Exception {
-		private static final long serialVersionUID = -3200617630057936085L;
+        @Serial
+        private static final long serialVersionUID = -3200617630057936085L;
 
-		TagsException(String message) {
+        TagsException(String message) {
             super(message);
         }
     }
 
     private static class InvalidConfigurationException extends Exception {
-		private static final long serialVersionUID = -8671942212072413651L;
+        @Serial
+        private static final long serialVersionUID = -8671942212072413651L;
 
-		InvalidConfigurationException(String message) {
+        InvalidConfigurationException(String message) {
             super(message);
         }
     }
 
     private static class CredentialsNotFoundException extends Exception {
-		private static final long serialVersionUID = 5269265422495501813L;
+        @Serial
+        private static final long serialVersionUID = 5269265422495501813L;
 
-		CredentialsNotFoundException(String message) {
+        CredentialsNotFoundException(String message) {
             super(message);
         }
     }
@@ -530,13 +531,13 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
                 try {
                     String exiCodeString = Optional.ofNullable(br.readLine())
-                            .orElseThrow(() -> new NumberFormatException())
+                            .orElseThrow(NumberFormatException::new)
                             .trim();
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeRead(), exiCodeString);
                     }
                     fixedCode = Integer.parseInt(exiCodeString);
-                } catch (IOException  | NumberFormatException e) {
+                } catch (IOException | NumberFormatException e) {
                     if (DEBUG) {
                         TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExitCodeReadFailed());
                     }
@@ -602,8 +603,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         checkParameter(launchType, "launchType", TcInstallation.LaunchType.class, null);
         checkParameter(executorType, "executorType", TcInstallation.ExecutorType.class, Constants.ANY_CONSTANT);
-        checkParameter(actionOnWarnings, "actionOnWarnings",   BuildStepAction.class, null);
-        checkParameter(actionOnErrors, "actionOnErrors",   BuildStepAction.class, null);
+        checkParameter(actionOnWarnings, "actionOnWarnings", BuildStepAction.class, null);
+        checkParameter(actionOnErrors, "actionOnErrors", BuildStepAction.class, null);
 
         if (sessionScreenResolution != null && (!sessionScreenResolution.isEmpty()) && ScreenResolution.parseResolution(sessionScreenResolution) == null) {
             throw new InvalidConfigurationException(String.format(Messages.TcTestBuilder_InvalidParameterValue(), sessionScreenResolution, "sessionScreenResolution"));
@@ -671,10 +672,10 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         boolean isJNLPSlave = Optional.ofNullable(filePath)
-            .map(fpath -> fpath.toComputer())
-            .map(comp -> !comp.isLaunchSupported())
-            .orElseGet(() -> false) && !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
-        
+                .map(FilePath::toComputer)
+                .map(comp -> !comp.isLaunchSupported())
+                .orElse(false) && !Utils.IsLaunchedAsSystemUser(launcher.getChannel(), listener);
+
 
         boolean needToUseService = useTCService;
 
@@ -714,8 +715,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         } else if (useSessionCreator) {
             try {
                 args = prepareSessionCreatorCommandLine(listener, chosenInstallation, args, env);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 TcLog.printStackTrace(listener, e);
                 TcLog.info(listener, Messages.TcTestBuilder_MarkingBuildAsFailed());
                 run.setResult(Result.FAILURE);
@@ -725,16 +725,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
         // TC/TE launching and data processing
         TcReportAction tcReportAction = Optional.ofNullable(filePath)
-            .map(fpath -> fpath.toComputer())
-            .map(computer -> computer.getNode())
-            .map(node -> new TcReportAction(run
-                , workspace.getLogId()
-                , testDisplayName
-                , node.getDisplayName()))
-            .orElseGet(() -> null);
+                .map(FilePath::toComputer)
+                .map(Computer::getNode)
+                .map(node -> new TcReportAction(run
+                        , workspace.getLogId()
+                        , testDisplayName
+                        , node.getDisplayName()))
+                .orElse(null);
 
-        if(tcReportAction == null)
-        {
+        if (tcReportAction == null) {
             run.setResult(Result.FAILURE);
             return;
         }
@@ -759,7 +758,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             Launcher.ProcStarter processStarter = null;
 
             // need to mask any data
-            if (passwordsToMask.size() > 0) {
+            if (!passwordsToMask.isEmpty()) {
                 Launcher decoratedLauncher = new CustomDecoratedLauncher(launcher, passwordsToMask);
                 processStarter = decoratedLauncher.launch().cmds(args).envs(run.getEnvironment(listener)).quiet(true);
             } else {
@@ -778,7 +777,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             }
 
             if (DEBUG && (processStdout != null)) {
-                String processOutput = IOUtils.toString(processStdout, "UTF-8");
+                String processOutput = IOUtils.toString(processStdout, StandardCharsets.UTF_8);
                 if ((processOutput != null) && (!processOutput.isEmpty())) {
                     TcLog.debug(listener, Messages.TcTestBuilder_Debug_ExecutorOutput() + "\n" + processOutput);
                 }
@@ -881,7 +880,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             try {
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 String xml = tcReportAction.getLogInfo().getXML();
-                byteArrayOutputStream.write(xml.getBytes("UTF-8"));
+                byteArrayOutputStream.write(xml.getBytes(StandardCharsets.UTF_8));
                 byteArrayOutputStream.writeTo(os);
             } finally {
                 os.close();
@@ -1044,7 +1043,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         return resultArgs;
     }
 
-    private ArgumentListBuilder prepareSessionCreatorCommandLine(TaskListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) throws Exception {
+    private ArgumentListBuilder prepareSessionCreatorCommandLine(TaskListener listener, TcInstallation chosenInstallation, ArgumentListBuilder baseArgs, EnvVars env) {
         ArgumentListBuilder resultArgs = new ArgumentListBuilder();
 
         resultArgs.addQuoted(chosenInstallation.getSessionCreatorPath());
@@ -1068,7 +1067,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         try {
             if (workspace.getSlaveErrorFilePath().exists()) {
                 br = new BufferedReader(new InputStreamReader(workspace.getSlaveErrorFilePath().read(), Charset.forName(Constants.DEFAULT_CHARSET_NAME)));
-                String errorString = Optional.ofNullable(br.readLine()).orElseGet(() -> "").trim();
+                String errorString = Optional.ofNullable(br.readLine()).orElse("").trim();
                 TcLog.warning(listener, Messages.TcTestBuilder_ErrorMessage(), errorString);
                 testResult.setError(errorString);
             }
@@ -1111,8 +1110,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                     workspace.getSlaveLogXFilePath().delete();
                 }
             }
-        }
-        else {
+        } else {
             TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
                     workspace.getSlaveLogXFilePath().getName());
 
@@ -1197,28 +1195,18 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
     }
 
     private String getExitCodeDescription(int exitCode) {
-        switch (exitCode) {
-            case -6:
-                return Messages.ErrorMessages_TcServiceProcessNotAvailable();
-            case -7:
-                return Messages.ErrorMessages_TcServiceInvalidArgs();
-            case -8:
-                return Messages.ErrorMessages_TcServiceInternalError();
-            case -9:
-                return Messages.ErrorMessages_TcServiceInternalError();
-            case -10:
-                return Messages.ErrorMessages_TcServiceSessionCreationError();
-            case -11:
-                return Messages.ErrorMessages_TcServiceSessionLogOffError();
-            case -12:
-                return Messages.ErrorMessages_TcServiceProcessCreationError();
-            case -13:
-                return Messages.ErrorMessages_TcServiceTimeout();
-            case -14:
-                return Messages.ErrorMessages_TcServiceOldVersion();
-            default:
-                return null;
-        }
+        return switch (exitCode) {
+            case -6 -> Messages.ErrorMessages_TcServiceProcessNotAvailable();
+            case -7 -> Messages.ErrorMessages_TcServiceInvalidArgs();
+            case -8 -> Messages.ErrorMessages_TcServiceInternalError();
+            case -9 -> Messages.ErrorMessages_TcServiceInternalError();
+            case -10 -> Messages.ErrorMessages_TcServiceSessionCreationError();
+            case -11 -> Messages.ErrorMessages_TcServiceSessionLogOffError();
+            case -12 -> Messages.ErrorMessages_TcServiceProcessCreationError();
+            case -13 -> Messages.ErrorMessages_TcServiceTimeout();
+            case -14 -> Messages.ErrorMessages_TcServiceOldVersion();
+            default -> null;
+        };
     }
 
     private long getTimeoutValue(TaskListener listener, EnvVars env) {
@@ -1336,7 +1324,7 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             addArg(args, PROJECT_ARG + env.expand(getProject()), useNewCommandLineFormat);
             addArg(args, TEST_ARG + env.expand(getTest()), useNewCommandLineFormat);
         }
-        if (getOnPremiseServerUrl() != null && !getOnPremiseServerUrl().trim().isEmpty()){
+        if (getOnPremiseServerUrl() != null && !getOnPremiseServerUrl().trim().isEmpty()) {
             addArg(args, ON_PREMISE_SERVER_URL_ARG + env.expand(getOnPremiseServerUrl()), useNewCommandLineFormat);
         }
 
@@ -1390,10 +1378,11 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
 
     @Override
     public DescriptorImpl getDescriptor() {
-        return (DescriptorImpl)super.getDescriptor();
+        return (DescriptorImpl) super.getDescriptor();
     }
 
-    @Extension @Symbol("testcompletetest")
+    @Extension
+    @Symbol("testcompletetest")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public DescriptorImpl() {
@@ -1406,8 +1395,8 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         @Override
-        public Builder newInstance(StaplerRequest req, @Nonnull JSONObject formData) throws FormException {
-            TcTestBuilder builder = (TcTestBuilder)super.newInstance(req, formData);
+        public Builder newInstance(StaplerRequest2 req, @Nonnull JSONObject formData) throws FormException {
+            TcTestBuilder builder = (TcTestBuilder) super.newInstance(req, formData);
             if (!StringUtils.isEmpty(builder.getCredentialsId())) {
                 builder.setUserName("");
                 builder.setUserPassword("");
@@ -1538,20 +1527,20 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 }
             }
 
-            // TODO: Change the deprecated ACL.SYSTEM once we have 
-            // a proper replacement 
+            // TODO: Change the deprecated ACL.SYSTEM once we have
+            // a proper replacement
             return result
-                .includeEmptyValue()
-                .includeAs(ACL.SYSTEM
-                    ,item
-                    , StandardUsernamePasswordCredentials.class
-                    , Collections.emptyList())
-                .includeMatchingAs(ACL.SYSTEM
-                    ,item
-                    , StandardUsernamePasswordCredentials.class
-                    , Collections.emptyList()
-                    , CredentialsMatchers.withId(credentialsId));
-            
+                    .includeEmptyValue()
+                    .includeAs(ACL.SYSTEM
+                            , item
+                            , StandardUsernamePasswordCredentials.class
+                            , Collections.emptyList())
+                    .includeMatchingAs(ACL.SYSTEM
+                            , item
+                            , StandardUsernamePasswordCredentials.class
+                            , Collections.emptyList()
+                            , CredentialsMatchers.withId(credentialsId));
+
         }
 
         public ListBoxModel doFillAccessKeyIdItems(@AncestorInPath Item item, @QueryParameter String accessKeyId) {
@@ -1571,19 +1560,19 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 }
             }
 
-            // TODO: Change the deprecated ACL.SYSTEM once we have 
-            // a proper replacement  
+            // TODO: Change the deprecated ACL.SYSTEM once we have
+            // a proper replacement
             return result
-                .includeEmptyValue()
-                .includeAs(ACL.SYSTEM
-                    ,item
-                    , StringCredentials.class
-                    , Collections.emptyList())
-                .includeMatchingAs(ACL.SYSTEM
-                    ,item
-                    , StringCredentials.class
-                    , Collections.emptyList()
-                    , CredentialsMatchers.withId(accessKeyId));
+                    .includeEmptyValue()
+                    .includeAs(ACL.SYSTEM
+                            , item
+                            , StringCredentials.class
+                            , Collections.emptyList())
+                    .includeMatchingAs(ACL.SYSTEM
+                            , item
+                            , StringCredentials.class
+                            , Collections.emptyList()
+                            , CredentialsMatchers.withId(accessKeyId));
 
         }
     }

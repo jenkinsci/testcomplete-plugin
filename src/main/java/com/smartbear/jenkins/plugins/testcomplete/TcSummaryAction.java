@@ -31,7 +31,9 @@ import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * @author Igor Filin
@@ -77,7 +79,7 @@ public class TcSummaryAction implements Action {
         }
     }
 
-    @Exported(name="reports", inline = true)
+    @Exported(name = "reports", inline = true)
     public ArrayList<TcReportAction> getReportsOrder() {
         return reportsOrder;
     }

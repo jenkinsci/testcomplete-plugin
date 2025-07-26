@@ -31,6 +31,7 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -40,8 +41,9 @@ import java.io.Serializable;
 @ExportedBean
 public class TcReportAction implements Action, Serializable {
 
+    @Serial
     private static final long serialVersionUID = 7225479325486123L;
-    
+
     private transient final Run<?, ?> build;
 
     private final String id;
@@ -93,17 +95,17 @@ public class TcReportAction implements Action, Serializable {
         return id;
     }
 
-    @Exported(name="testName")
+    @Exported(name = "testName")
     public String getTestName() {
         return testName;
     }
 
-    @Exported(name="agent")
+    @Exported(name = "agent")
     public String getAgent() {
         return agent;
     }
 
-    @Exported(name="url")
+    @Exported(name = "url")
     public String getUrl() {
         return Jenkins.get().getRootUrl() + build.getUrl() + Constants.PLUGIN_NAME + "/reports/" + id;
     }
@@ -132,7 +134,7 @@ public class TcReportAction implements Action, Serializable {
         this.mhtFileName = mhtFileName;
     }
 
-    @Exported(name="exitCode")
+    @Exported(name = "exitCode")
     public int getExitCode() {
         return exitCode;
     }
@@ -141,7 +143,7 @@ public class TcReportAction implements Action, Serializable {
         this.exitCode = exitCode;
     }
 
-    @Exported(name="success")
+    @Exported(name = "success")
     public boolean getResult() {
         return result;
     }
@@ -150,7 +152,7 @@ public class TcReportAction implements Action, Serializable {
         this.result = result;
     }
 
-    @Exported(name="failedToStart")
+    @Exported(name = "failedToStart")
     public boolean getStartFailed() {
         return startFailed;
     }
@@ -159,7 +161,7 @@ public class TcReportAction implements Action, Serializable {
         this.startFailed = startFailed;
     }
 
-    @Exported(name="error")
+    @Exported(name = "error")
     public String getError() {
         return error;
     }
@@ -168,7 +170,7 @@ public class TcReportAction implements Action, Serializable {
         this.error = error;
     }
 
-    @Exported(name="details", inline=true)
+    @Exported(name = "details", inline = true)
     public TcLogInfo getLogInfo() {
         return logInfo;
     }

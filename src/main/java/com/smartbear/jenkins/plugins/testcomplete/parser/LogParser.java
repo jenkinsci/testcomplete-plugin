@@ -30,14 +30,20 @@ import com.smartbear.jenkins.plugins.testcomplete.TcLogInfo;
 import com.smartbear.jenkins.plugins.testcomplete.Utils;
 import hudson.model.TaskListener;
 import org.apache.commons.lang.StringUtils;
-import org.w3c.dom.*;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import javax.xml.bind.DatatypeConverter;
-import javax.xml.stream.*;
-
+import javax.xml.stream.FactoryConfigurationError;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.zip.ZipFile;
 
 /**
@@ -128,9 +134,9 @@ public class LogParser implements ILogParser {
             logInfo.setXML(xml);
 
             return logInfo;
-        } catch ( IOException 
-                | FactoryConfigurationError
-                | XMLStreamException e) {
+        } catch (IOException
+                 | FactoryConfigurationError
+                 | XMLStreamException e) {
 
             TcLog.error(listener, Messages.TcTestBuilder_ExceptionOccurred(), e.toString());
             return null;
