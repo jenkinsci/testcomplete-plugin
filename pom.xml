@@ -11,7 +11,7 @@
     <java.version>11</java.version>
   </properties>
 
-  <artifactId>TestComplete-test</artifactId>
+  <artifactId>TestComplete</artifactId>
   <name>TestComplete support plug-in</name>
   <version>2.10-SNAPSHOT</version>
 
