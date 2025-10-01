@@ -628,6 +628,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return;
         }
 
+        //Prefilight check, check if project file exists
+
+        File projectFile = new File(getSuite());
+        if(!projectFile.exists() || projectFile.isDirectory()) {
+            TcLog.error(listener, Messages.TcTestBuilder_UnableToFindProjectFile(), getSuite());
+            run.setResult(Result.FAILURE);
+            return;
+        }
+
         // Search required TC/TE installation
 
         final TcInstallationsScanner scanner = new TcInstallationsScanner(launcher.getChannel(), listener);
@@ -684,6 +693,9 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
         }
 
         boolean useSessionCreator = chosenInstallation.hasExtendedCommandLine() && (!needToUseService);
+
+        TcLog.info(listener, "Log file: %s", workspace.getMasterLogXFilePath().getName());
+        
 
         // Making the command line
         List<String> passwordsToMask = new ArrayList<>();
@@ -1113,9 +1125,9 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             }
         }
         else {
-            TcLog.warning(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
+            TcLog.error(listener, Messages.TcTestBuilder_UnableToFindLogFile(),
                     workspace.getSlaveLogXFilePath().getName());
-
+            run.setResult(Result.FAILURE);
             testResult.setLogInfo(new TcLogInfo(startTime, 0, 0, 1, 0));
         }
 

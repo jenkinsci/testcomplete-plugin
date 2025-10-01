@@ -8,9 +8,10 @@
 
   <properties>
     <jenkins.version>2.361.4</jenkins.version>
+    <java.version>11</java.version>
   </properties>
 
-  <artifactId>TestComplete</artifactId>
+  <artifactId>TestComplete-test</artifactId>
   <name>TestComplete support plug-in</name>
   <version>2.10-SNAPSHOT</version>
 
