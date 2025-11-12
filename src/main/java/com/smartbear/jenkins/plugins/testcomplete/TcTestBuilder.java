@@ -628,15 +628,6 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
             return;
         }
 
-        //Prefilight check, check if project file exists
-
-        File projectFile = new File(getSuite());
-        if(!projectFile.exists() || projectFile.isDirectory()) {
-            TcLog.error(listener, Messages.TcTestBuilder_UnableToFindProjectFile(), getSuite());
-            run.setResult(Result.FAILURE);
-            return;
-        }
-
         // Search required TC/TE installation
 
         final TcInstallationsScanner scanner = new TcInstallationsScanner(launcher.getChannel(), listener);
@@ -734,6 +725,15 @@ public class TcTestBuilder extends Builder implements Serializable, SimpleBuildS
                 return;
             }
         }
+
+        //Prefilight check, check if project file exists
+        FilePath projectFile = new FilePath(workspace.getSlaveWorkspacePath(), env.expand(getSuite()));
+        if(!projectFile.exists() || projectFile.isDirectory()) {
+            TcLog.error(listener, Messages.TcTestBuilder_UnableToFindProjectFile(), projectFile.getRemote());
+            run.setResult(Result.FAILURE);
+            return;
+        }
+
 
         // TC/TE launching and data processing
         TcReportAction tcReportAction = Optional.ofNullable(filePath)
