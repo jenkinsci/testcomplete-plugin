@@ -8,6 +8,7 @@
 
   <properties>
     <jenkins.version>2.361.4</jenkins.version>
+    <java.version>11</java.version>
   </properties>
 
   <artifactId>TestComplete</artifactId>
