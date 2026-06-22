@@ -55,6 +55,16 @@ public class Utils {
 
     private static final int ENC_CHUNK_MAX_SIZE = 116;
 
+    private static final DatatypeFactory XML_DATATYPE_FACTORY = createXmlDatatypeFactory();
+
+    private static DatatypeFactory createXmlDatatypeFactory() {
+        try {
+            return DatatypeFactory.newInstance();
+        } catch (DatatypeConfigurationException e) {
+            throw new IllegalStateException("Failed to obtain a DatatypeFactory instance for XML date/time conversion", e);
+        }
+    }
+
     private Utils() {
     }
 
@@ -184,13 +194,9 @@ public class Utils {
         GregorianCalendar gc = new GregorianCalendar();
         gc.setTimeZone(cal.getTimeZone());
         gc.setTimeInMillis(cal.getTimeInMillis());
-        try {
-            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc).toXMLFormat();
-        } catch (DatatypeConfigurationException e) {
-            throw new IllegalStateException("Failed to obtain a DatatypeFactory instance for XML date/time conversion", e);
-        }
+        return XML_DATATYPE_FACTORY.newXMLGregorianCalendar(gc).toXMLFormat();
     }
-    
+
     static String encryptPassword(String password) throws Exception {
         byte[] keyRawData = Base64.getDecoder().decode(PUBLIC_KEY);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
