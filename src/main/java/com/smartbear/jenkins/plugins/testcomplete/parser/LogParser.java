@@ -32,7 +32,6 @@ import hudson.model.TaskListener;
 import org.apache.commons.lang.StringUtils;
 import org.w3c.dom.*;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.stream.*;
 
 import java.io.IOException;
@@ -283,7 +282,7 @@ public class LogParser implements ILogParser {
         String projectName = LogNodeUtils.getTextProperty(rootOwnerNodeInfoSummary, "test");
         Calendar cal = new GregorianCalendar();
         cal.setTimeInMillis(startDate);
-        String timestamp = DatatypeConverter.printDateTime(cal);
+        String timestamp = Utils.printDateTime(cal);
 
         String rootOwnerNodeFileName = LogNodeUtils.getTextProperty(rootOwnerNode, "filename");
         if (rootOwnerNodeFileName == null || rootOwnerNodeFileName.isEmpty()) {

@@ -28,7 +28,6 @@ import com.smartbear.jenkins.plugins.testcomplete.Utils;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
-import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -422,7 +421,7 @@ class LogNodeUtils {
         long startDate = Utils.safeConvertDate(startTime);
         Calendar cal = new GregorianCalendar();
         cal.setTimeInMillis(startDate);
-        return DatatypeConverter.printDateTime(cal);
+        return Utils.printDateTime(cal);
     }
 
 }

@@ -33,6 +33,8 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.remoting.RoleChecker;
 
 import javax.crypto.Cipher;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import java.lang.ref.WeakReference;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -178,6 +180,17 @@ public class Utils {
         return (long) ((dSerialDate - 25569) * 24 * 3600 * 1000);
     }
 
+    public static String printDateTime(Calendar cal) {
+        GregorianCalendar gc = new GregorianCalendar();
+        gc.setTimeZone(cal.getTimeZone());
+        gc.setTimeInMillis(cal.getTimeInMillis());
+        try {
+            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc).toXMLFormat();
+        } catch (DatatypeConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
     static String encryptPassword(String password) throws Exception {
         byte[] keyRawData = Base64.getDecoder().decode(PUBLIC_KEY);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
