@@ -187,7 +187,7 @@ public class Utils {
         try {
             return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc).toXMLFormat();
         } catch (DatatypeConfigurationException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException("Failed to obtain a DatatypeFactory instance for XML date/time conversion", e);
         }
     }
     
