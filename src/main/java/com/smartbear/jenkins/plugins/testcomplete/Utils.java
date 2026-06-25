@@ -33,6 +33,8 @@ import jenkins.model.Jenkins;
 import org.jenkinsci.remoting.RoleChecker;
 
 import javax.crypto.Cipher;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import java.lang.ref.WeakReference;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -52,6 +54,16 @@ public class Utils {
         "L1xQevURO0+Sapzf7wIDAQAB";
 
     private static final int ENC_CHUNK_MAX_SIZE = 116;
+
+    private static final DatatypeFactory XML_DATATYPE_FACTORY = createXmlDatatypeFactory();
+
+    private static DatatypeFactory createXmlDatatypeFactory() {
+        try {
+            return DatatypeFactory.newInstance();
+        } catch (DatatypeConfigurationException e) {
+            throw new IllegalStateException("Failed to obtain a DatatypeFactory instance for XML date/time conversion", e);
+        }
+    }
 
     private Utils() {
     }
@@ -176,6 +188,13 @@ public class Utils {
     private static long OLEDateToMillis(double dSerialDate)
     {
         return (long) ((dSerialDate - 25569) * 24 * 3600 * 1000);
+    }
+
+    public static String printDateTime(Calendar cal) {
+        GregorianCalendar gc = new GregorianCalendar();
+        gc.setTimeZone(cal.getTimeZone());
+        gc.setTimeInMillis(cal.getTimeInMillis());
+        return XML_DATATYPE_FACTORY.newXMLGregorianCalendar(gc).toXMLFormat();
     }
 
     static String encryptPassword(String password) throws Exception {
