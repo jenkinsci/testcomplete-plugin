@@ -1,0 +1,12 @@
+name: build
+run-name: Build triggered by ${{ github.actor }}
+on:
+  push:
+  pull_request_target:
+    types: [opened, edited, ready_for_review]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./mvnw install
