@@ -80,8 +80,12 @@ You can find complete information on using the plugin in [**TestComplete documen
 If you have any questions or need assistance with setting up the plugin and configuring the step’s properties, please [contact the SmartBear Support Team](http://support.smartbear.com/message/?prod=TestComplete).
 
 ## *Version History*
-#### Version 2.9,1
--   Fix security issue SECURITY-2741 / CVE-2023-24443 where TestComplete support Plugin 2.8.1 and earlier does not configure its XML parser to prevent XML external entity (XXE) attacks.
+#### Version 2.11
+-   *Fixed*: Replaced JAXB DatatypeConverter with JDK DatatypeFactory to resolve Java 11+ compatibility issues.
+-   *Fixed*: Added preflight checks - the build now fails immediately if the project suite file is missing or the log file is not found; relative paths are also resolved correctly.
+
+#### Version 2.10
+-   *New feature*: Added an **On-premise License Server URL** field that lets you specify an on-premise license server URL when running TestComplete tests.
 
 #### Version 2.9.2
 -   Fix Stored XSS vulnerability (SECURITY-2892 / CVE-2023-33002)
